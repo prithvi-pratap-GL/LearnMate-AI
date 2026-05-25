@@ -40,7 +40,7 @@ app.add_middleware(
 )
 
 from app.routes import learning
-app.include_router(learning.router, prefix="/api")
+app.include_router(learning.router, prefix="/api/learning")
 
 @app.get("/")
 def read_root():
