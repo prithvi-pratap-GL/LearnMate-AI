@@ -1,16 +1,28 @@
 import json
-from app.services.huggingface_service import query_model
+from app.services.huggingface_service import query_model, calculate_score_from_answers
 from app.utils.prompts import EVALUATION_PROMPT
 from app.models.schemas import LearningAnalysisRequest
 
 async def evaluate_learning(request: LearningAnalysisRequest):
     """
     Evaluates the learner's answers using an LLM.
+    Calculates score by comparing student answers with correct answers.
     """
-    answers_str = "\n".join([
-        f"Question: {q.question}\nCorrect Answer: {q.correct_answer}\nStudent Answer: {q.student_answer}"
+    # Calculate score by comparing answers
+    questions_list = [
+        {
+            "question": q.question,
+            "student_answer": q.student_answer,
+            "correct_answer": q.correct_answer
+        }
         for q in request.questions
-    ])
+    ]
+
+    score = calculate_score_from_answers(questions_list)
+
+    # Format answers as JSON for proper parsing in mock response
+    answers_json = json.dumps(questions_list)
+    answers_str = f"Score: {score}\n\n" + answers_json
 
     prompt = EVALUATION_PROMPT.format(topic=request.topic, answers=answers_str)
 
@@ -25,6 +37,8 @@ async def evaluate_learning(request: LearningAnalysisRequest):
             if json_str_start != -1 and json_str_end > json_str_start:
                 json_str = generated_text[json_str_start:json_str_end]
                 evaluation_data = json.loads(json_str)
+                # Override score with calculated score
+                evaluation_data['score'] = score
                 return evaluation_data
             else:
                 raise ValueError("No JSON object found in the model's response.")

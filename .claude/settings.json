@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/j.sebastian/Desktop/FDE/ Gemini/ Code/ assist/frontend/src/components/**)",
+      "Bash(curl -s -X POST http://localhost:8000/api/learning/submit-round-2 -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(python -m json.tool)",
+      "Bash(node /tmp/test_render.js)",
+      "Bash(sed -i \"s|'http://localhost:8000/api/generate-questions'|'http://localhost:8000/api/learning/generate-questions'|g\" \"/c/Users/j.sebastian/Desktop/FDE Gemini Code assist/frontend/src/pages/QuizPage.tsx\")",
+      "Bash(sed -i \"s|'http://localhost:8000/api/submit-round-1'|'http://localhost:8000/api/learning/submit-round-1'|g\" \"/c/Users/j.sebastian/Desktop/FDE Gemini Code assist/frontend/src/pages/QuizPage.tsx\")",
+      "Bash(sed -i \"s|'http://localhost:8000/api/submit-round-2'|'http://localhost:8000/api/learning/submit-round-2'|g\" \"/c/Users/j.sebastian/Desktop/FDE Gemini Code assist/frontend/src/pages/QuizPage.tsx\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/learning/generate-questions -H 'Content-Type: application/json' -d '{\"topic\": \"JavaScript\"}')",
+      "Bash(curl -s -X POST http://localhost:8000/api/learning/submit-round-1 -H 'Content-Type: application/json' -d '{ *)"
+    ]
+  }
+}

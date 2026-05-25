@@ -51,6 +51,7 @@ const QuizPage: React.FC = () => {
   const [result, setResult] = useState<IAnalysisResult | null>(null);
   const [round1Evaluation, setRound1Evaluation] = useState<IEvaluation | null>(null);
   const [round1Score, setRound1Score] = useState<number | null>(null);
+  const [round1Questions, setRound1Questions] = useState<IQuestion[]>([]);
 
   const handleGenerateRound1Questions = async () => {
     if (!topic.trim()) {
@@ -65,7 +66,7 @@ const QuizPage: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/generate-questions', {
+      const response = await axios.post('http://localhost:8000/api/learning/generate-questions', {
         topic
       });
       const generatedQuestions = response.data.questions.map((q: any) => ({
@@ -84,9 +85,9 @@ const QuizPage: React.FC = () => {
     }
   };
 
-  const handleQuestionChange = (index: number, field: keyof IQuestion, value: string) => {
+  const handleQuestionChange = (index: number, field: keyof IQuestion, value: string | string[]) => {
     const newQuestions = [...questions];
-    newQuestions[index][field] = value;
+    newQuestions[index][field] = value as any;
     setQuestions(newQuestions);
   };
 
@@ -102,13 +103,14 @@ const QuizPage: React.FC = () => {
     };
 
     try {
-      const response = await axios.post('http://localhost:8000/api/submit-round-1', payload);
+      const response = await axios.post('http://localhost:8000/api/learning/submit-round-1', payload);
       const data = response.data;
 
       if (data.can_proceed_to_round_2) {
         // User passed Round 1, prepare for Round 2
         setRound1Evaluation(data.evaluation);
         setRound1Score(data.score);
+        setRound1Questions(questions);
         await generateRound2Questions();
       } else {
         // User failed Round 1, show results
@@ -133,7 +135,7 @@ const QuizPage: React.FC = () => {
   const generateRound2Questions = async () => {
     setGeneratingQuestions(true);
     try {
-      const response = await axios.post('http://localhost:8000/api/generate-round-2-questions', {
+      const response = await axios.post('http://localhost:8000/api/learning/generate-round-2-questions', {
         topic
       });
       const generatedQuestions = response.data.questions.map((q: any) => ({
@@ -166,7 +168,7 @@ const QuizPage: React.FC = () => {
     };
 
     try {
-      const response = await axios.post('http://localhost:8000/api/submit-round-2', payload);
+      const response = await axios.post('http://localhost:8000/api/learning/submit-round-2', payload);
       setResult({
         status: response.data.status,
         round: 2,
@@ -174,7 +176,7 @@ const QuizPage: React.FC = () => {
         round_2_evaluation: response.data.round_2_evaluation,
         generated_content: response.data.generated_content,
         roadmap: response.data.roadmap,
-        questions,
+        questions: response.data.questions || questions,
       });
       setCurrentRound(0);
     } catch (err) {
@@ -194,6 +196,7 @@ const QuizPage: React.FC = () => {
     setError(null);
     setRound1Evaluation(null);
     setRound1Score(null);
+    setRound1Questions([]);
   };
 
   // Initial input screen
@@ -346,10 +349,11 @@ const QuizPage: React.FC = () => {
           </div>
         )}
         <ResultsDashboard
-          evaluation={result.round === 2 ? result.round_2_evaluation : result.evaluation}
+          evaluation={result.round === 2 ? (result.round_2_evaluation || result.evaluation!) : (result.evaluation || result.round_2_evaluation!)}
           generatedContent={result.generated_content}
           roadmap={result.roadmap}
           questions={result.questions}
+          round1Questions={round1Questions}
           round={result.round}
           disqualified={result.round === 1 && !result.can_proceed_to_round_2}
         />

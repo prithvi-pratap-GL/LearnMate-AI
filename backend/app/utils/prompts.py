@@ -51,47 +51,80 @@ No markdown
 No explanations outside JSON
 """
 
-BEGINNER_EXPLANATION_PROMPT = """
-Explain the topic for a beginner.
+PERFORMANCE_ANALYSIS_PROMPT = """
+Analyze the learner's performance in detail. Provide a pointwise breakdown of their answers.
 
-Include:
-
-simple explanation
-real-world examples
-easy exercises
-important concepts
+TOPIC_IDENTIFIER: {topic}
 Topic: {topic}
+Score: {score}%
 
-Weak Areas: {weak_areas}
+Questions and Answers:
+{questions}
+
+Generate a detailed performance analysis that includes:
+1. Pointwise feedback on each question (what they got right/wrong and why)
+2. Explanation of correct answers for questions they missed
+3. Identification of their strengths based on correct answers
+4. Specific areas to focus on for improvement
+5. Positive reinforcement about their learning progress
+
+Make the analysis specific to {topic} with relevant technical terminology and concepts.
 """
 
 ADVANCED_CHALLENGES_PROMPT = """
-Generate advanced challenge problems.
+Generate advanced challenge problems for {topic} at {level} level.
+
+Topic: {topic}
+Score: {score}%
+Current Strengths: {strengths}
 
 Include:
+- Complex {topic} challenges specific to {topic} concepts
+- Real-world scenario-based problems using {topic}
+- Optimization and performance questions related to {topic}
+- Mini-project ideas that demonstrate {topic} expertise
+- Architecture and design patterns for {topic}
 
-coding challenges
-scenario-based problems
-optimization questions
-mini-project ideas
+Make all challenges specific to {topic} with technical terminology and concrete examples.
+"""
+
+SOLUTION_EXPLANATION_PROMPT = """
+Provide detailed explanations of the correct answers for the following questions in {topic}.
+
+TOPIC_IDENTIFIER: {topic}
 Topic: {topic}
+Score: {score}%
 
-Strengths: {strengths}
+Questions and Answers:
+{questions}
+
+Generate a detailed solution guide that includes:
+1. For each question, explain why the correct answer is right
+2. Provide the technical reasoning behind each correct answer
+3. Explain common misconceptions students have
+4. Include {topic}-specific concepts and terminology in explanations
+5. Make explanations concise but thorough
+
+Format as a clear, organized guide with explanations for each question.
 """
 
 ROADMAP_PROMPT = """
-Generate a 30-day personalized learning roadmap.
+Generate a personalized learning roadmap for {topic} at {level} level.
+
+Topic: {topic}
+Target Level: {level}
+Current Score: {score}%
+Strengths: {strengths}
+Areas to Improve: {weak_areas}
 
 Include:
+- 30-day structured learning plan specific to {topic}
+- Daily study schedule with {topic}-specific activities
+- Milestones and checkpoints for {topic} mastery
+- {topic}-specific projects and hands-on practice
+- Technical concepts and terminology to master in {topic}
+- Resources and best practices for {topic}
+- Progress tracking strategy for {topic}
 
-daily study plan
-revision schedule
-project suggestions
-practice exercises
-improvement strategy
-Weak Areas: {weak_areas}
-
-Strengths: {strengths}
-
-Level: {level}
+Make the roadmap highly specific to {topic} with concrete examples, technical terms, and {topic}-related project ideas.
 """
