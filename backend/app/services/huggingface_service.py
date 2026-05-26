@@ -399,7 +399,7 @@ def generate_mock_response(prompt: str):
             weak_areas = [f"Advanced {topic} techniques", "Optimization strategies", "Edge case handling"]
             level = "Intermediate"
         elif score < 90:
-            strengths = [f"Strong {topic} expertise", "Advanced problem-solving ability", "Nuanced understanding"],
+            strengths = [f"Strong {topic} expertise", "Advanced problem-solving ability", "Nuanced understanding"]
             weak_areas = [f"Specialized {topic} domains", "Cutting-edge techniques", f"{topic} performance optimization"]
             level = "Advanced"
         else:
