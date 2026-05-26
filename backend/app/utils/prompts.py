@@ -1,5 +1,5 @@
 QUESTION_GENERATION_PROMPT = """
-Generate 5 core concept Multiple Choice Questions (MCQ) about "{topic}".
+Generate 5 UNIQUE, CORE CONCEPT Multiple Choice Questions (MCQ) specifically about "{topic}".
 Difficulty Level: {difficulty}
 
 Return ONLY valid JSON array (no other text):
@@ -8,31 +8,39 @@ Return ONLY valid JSON array (no other text):
   {{"question": "...", "options": ["A", "B", "C", "D"], "correct_answer": "..."}}
 ]
 
+CRITICAL REQUIREMENTS:
+1. Questions MUST BE UNIQUE - No repetition within this set
+2. CORE CONCEPTS ONLY - Focus on fundamental/essential {topic} concepts, not edge cases
+3. TO THE POINT - Direct questions testing knowledge, avoid lengthy narrative questions
+4. TOPIC-SPECIFIC - Use {topic}-specific terminology and examples
+5. DIFFICULTY LEVEL:
+   - beginner: Basic definitions and fundamental concepts
+   - intermediate: Deeper understanding, connections between concepts
+   - advanced: Complex scenarios, problem-solving, implementation details
+
 Requirements for QUESTIONS:
-- Generate Multiple Choice Questions with exactly 4 options each
-- Difficulty Level: {difficulty} (beginner = basic concepts, intermediate = deeper understanding, advanced = complex scenarios)
-- Options should be realistic but distinct
-- One correct answer, three plausible distractors
-- Each question should be clear and unambiguous
-- CRITICAL: Ensure questions are UNIQUE and NOT REPEATED across different difficulty levels
+- Each question tests ONE specific {topic} concept
+- Phrasing must be concise and clear
+- Avoid ambiguity
+- No generic or filler questions
 
 Requirements for OPTIONS:
-- Always provide exactly 4 options
-- Mix the correct answer position (don't always put it in the same spot)
-- Make distractors realistic and related to the topic
-- Format as a simple list of strings
+- Exactly 4 options per question
+- Mix correct answer position (not always same spot)
+- Plausible distractors related to {topic}, not obvious wrong answers
+- All options must be realistic for the difficulty level
 
 Requirements for ANSWERS:
-- Should be one of the 4 options provided
-- Clear and factually correct
+- One of the 4 options provided
+- Technically correct
 - Matches the difficulty level requested
 
 OUTPUT FORMAT:
-- Return ONLY valid JSON array
+- ONLY valid JSON array, no other text
 - No markdown, no code blocks, no explanations
-- Each question must have "question", "options" (array of 4), and "correct_answer" fields
-- No duplicate questions within the response
-- No questions that repeat content from other difficulty levels
+- Fields: "question", "options" (array of 4 strings), "correct_answer" (exact match of one option)
+- NO DUPLICATE QUESTIONS within response
+- NO GENERIC OR FILLER QUESTIONS
 """
 
 EVALUATION_PROMPT = """
