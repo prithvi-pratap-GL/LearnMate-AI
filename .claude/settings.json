@@ -19,7 +19,10 @@
       "Bash(curl -s -X POST http://localhost:8000/api/learning/submit-round-1 \\\\ *)",
       "Bash(npm start *)",
       "Bash(netstat -ano)",
-      "Bash(HUGGING_FACE_API_KEY=test python3)"
+      "Bash(HUGGING_FACE_API_KEY=test python3)",
+      "Bash(curl -X POST http://localhost:8000/api/learning/generate-questions -H 'Content-Type: application/json' -d '{\"topic\":\"Python\"}')",
+      "Bash(curl -X POST http://localhost:8001/api/learning/generate-questions -H 'Content-Type: application/json' -d '{\"topic\":\"Python\"}')",
+      "Bash(curl -s -X POST http://localhost:8002/api/learning/generate-questions -H 'Content-Type: application/json' -d '{\"topic\":\"Python\"}')"
     ],
     "additionalDirectories": [
       "\\tmp"

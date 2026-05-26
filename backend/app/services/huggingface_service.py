@@ -343,7 +343,7 @@ def generate_mock_response(prompt: str):
     import re
 
     # Check what type of request this is based on the prompt content
-    if "Generate 5 core concept" in prompt and "MCQ" in prompt:
+    if "Generate 5" in prompt and "MCQ" in prompt:
         # Question generation - return topic-specific MCQ questions with dynamic options
         topic = extract_topic_from_prompt(prompt)
         difficulty = "beginner"
