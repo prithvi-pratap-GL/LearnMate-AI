@@ -1,0 +1,240 @@
+═══════════════════════════════════════════════════════════════════════════════
+                     LearnMate AI - LLM Workflow Summary
+═══════════════════════════════════════════════════════════════════════════════
+
+STAGE 1: ROUND 1 - BEGINNER LEVEL ASSESSMENT
+─────────────────────────────────────────────────────────────────────────────
+
+[1] Student selects topic (e.g., "Python Programming")
+    └─→ POST /generate-questions { "topic": "Python Programming" }
+
+[2] Question Service generates questions
+    └─→ Mistral 7B model creates 5 beginner-level MCQs
+    └─→ Returns: [Question1, Question2, Question3, Question4, Question5]
+
+[3] Student answers 5 questions
+    └─→ POST /submit-round-1 with student answers
+
+[4] Evaluation Service judges the answers
+    └─→ Llama 70B model (high-capacity evaluator) analyzes:
+        • Correctness of each answer
+        • Understanding depth
+        • Strengths and weaknesses
+    └─→ Calculates proficiency level: Beginner/Intermediate/Advanced
+
+[5] Decision Point
+    ┌─ Score < 50% → Performance Analysis → STOP (End of assessment)
+    └─ Score ≥ 50% → Proceed to ROUND 2
+
+═══════════════════════════════════════════════════════════════════════════════
+
+STAGE 2: ROUND 2 - ADVANCED LEVEL ASSESSMENT (if qualified)
+─────────────────────────────────────────────────────────────────────────────
+
+[6] Advanced questions generated
+    └─→ POST /generate-round-2-questions with Round 1 questions
+    └─→ Mistral 7B creates 5 advanced-level MCQs
+    └─→ FILTERS OUT any Round 1 questions (no repeats!)
+    └─→ Returns: [Advanced_Q1, Advanced_Q2, Advanced_Q3, Advanced_Q4, Advanced_Q5]
+
+[7] Student answers 5 advanced questions
+    └─→ POST /submit-round-2 with advanced answers + Round 1 results
+
+[8] Final Evaluation
+    └─→ Llama 70B analyzes Round 2 answers
+    └─→ Generates:
+        • Solution explanations for each question
+        • Challenge problems for further learning
+        • Personalized 30-day roadmap for next proficiency level
+
+[9] Final Report
+    └─→ Comprehensive feedback with:
+        ✓ Round 1 Score
+        ✓ Round 2 Score
+        ✓ Strengths identified
+        ✓ Weaknesses to focus on
+        ✓ Personalized learning roadmap
+
+═══════════════════════════════════════════════════════════════════════════════
+
+KEY LLM MODELS USED
+───────────────────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ QUESTION GENERATION (Both Round 1 & 2)                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Primary: mistralai/Mistral-7B-Instruct-v0.2                            │
+│ Why: Fast, efficient for MCQ creation                                   │
+│ Input: "Generate 5 MCQs about {topic} at {difficulty} level"           │
+│ Output: JSON array of 5 questions with options and answers             │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ EVALUATION & JUDGING (Primary evaluator)                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Primary: meta-llama/Llama-2-70b-chat-hf                                │
+│ Alternatives:                                                           │
+│   1. mistralai/Mistral-Large-Instruct-2407                             │
+│   2. NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO                       │
+│   3. mistralai/Mistral-7B-Instruct-v0.2 (fallback)                     │
+│                                                                         │
+│ Why: Llama 70B has high capacity for nuanced evaluation                │
+│ Input: Questions with student answers                                  │
+│ Output: { score, strengths, weak_areas, proficiency_level }          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ SUPPORTING TASKS (all use Mistral 7B)                                  │
+├─────────────────────────────────────────────────────────────────────────┤
+│ • Performance Analysis: Detailed feedback on Round 1 answers            │
+│ • Advanced Challenges: Challenge problems for high performers           │
+│ • Solution Explanation: Why each answer is correct                      │
+│ • Roadmap Generation: 30-day personalized learning plan                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+INTELLIGENT FILTERING: UNIQUE QUESTIONS ACROSS ROUNDS
+───────────────────────────────────────────────────────────────────────────────
+
+Round 1 Questions:
+  ✓ What is Python's package manager?
+  ✓ What does ML stand for?
+  ✓ Which symbol for comments in Python?
+  ✓ What is a dataset?
+  ✓ What does NumPy do?
+
+Round 2 Questions (Advanced):
+  ✗ What is Python's package manager? (FILTERED OUT)
+  ✓ What is the Global Interpreter Lock (GIL)?
+  ✓ What are metaclasses in Python?
+  ✓ Explain the curse of dimensionality
+  ✓ What is transfer learning in ML?
+
+Result: All 5 Round 2 questions are UNIQUE and DIFFERENT from Round 1
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SCORE-BASED DECISION TREE
+───────────────────────────────────────────────────────────────────────────────
+
+Score < 40%: BEGINNER LEVEL
+├─ Strengths: Initiative, willingness to learn
+├─ Weak Areas: Foundational concepts, terminology
+└─ Output: Performance Analysis → Assessment Ends
+
+Score 40-60%: EARLY BEGINNER LEVEL
+├─ Strengths: Basic understanding, some practical awareness
+├─ Weak Areas: Deep principles, complex problem-solving
+└─ Output: Performance Analysis → Assessment Ends
+
+Score 60-75%: INTERMEDIATE LEVEL
+├─ Strengths: Solid foundation, good problem-solving
+├─ Weak Areas: Advanced techniques, optimization
+└─ Output: Round 2 → Solution Explanations → Advanced Roadmap
+
+Score 75-90%: ADVANCED LEVEL
+├─ Strengths: Strong expertise, advanced problem-solving
+├─ Weak Areas: Specialized domains, bleeding-edge tech
+└─ Output: Round 2 → Expert Challenges → Expert Roadmap
+
+Score 90%+: EXPERT LEVEL
+├─ Strengths: Expert knowledge, exceptional skills
+├─ Weak Areas: Niche specializations
+└─ Output: Round 2 → Advanced Challenges → Expert Roadmap
+
+═══════════════════════════════════════════════════════════════════════════════
+
+PROMPT TEMPLATES USED
+───────────────────────────────────────────────────────────────────────────────
+
+[1] QUESTION_GENERATION_PROMPT
+    → "Generate 5 core concept MCQs about {topic} at {difficulty} level"
+
+[2] EVALUATION_PROMPT
+    → "Act as expert evaluator for {topic}. Analyze these answers..."
+    → Returns: { score, strengths, weak_areas, level }
+
+[3] PERFORMANCE_ANALYSIS_PROMPT
+    → "Provide pointwise breakdown of answers with explanations"
+    → Returns: Detailed feedback markdown
+
+[4] ADVANCED_CHALLENGES_PROMPT
+    → "Generate advanced challenge problems for {topic}"
+    → Returns: Complex scenarios and real-world problems
+
+[5] SOLUTION_EXPLANATION_PROMPT
+    → "Provide detailed explanations of correct answers"
+    → Returns: Step-by-step solution guide
+
+[6] ROADMAP_PROMPT
+    → "Generate 30-day personalized learning roadmap at {level}"
+    → Returns: Structured learning plan with milestones
+
+═══════════════════════════════════════════════════════════════════════════════
+
+API ENDPOINTS ORCHESTRATION
+───────────────────────────────────────────────────────────────────────────────
+
+1. POST /generate-questions
+   Input:  { topic }
+   Output: { questions, round: 1, total_questions: 5 }
+   LLM:    Mistral 7B
+
+2. POST /submit-round-1
+   Input:  { student_name, topic, questions }
+   Output: { status, score, evaluation } OR { status, roadmap, content }
+   LLM:    Llama 70B (evaluation)
+
+3. POST /generate-round-2-questions
+   Input:  { topic, round_1_questions }
+   Output: { questions, round: 2, total_questions: 5 }
+   LLM:    Mistral 7B (with filtering)
+
+4. POST /submit-round-2
+   Input:  { student_name, topic, questions, round_1_score, round_1_evaluation }
+   Output: { status: "completed", round_2_evaluation, generated_content, roadmap }
+   LLM:    Llama 70B (evaluation) + supporting models
+
+═══════════════════════════════════════════════════════════════════════════════
+
+FALLBACK MECHANISM
+───────────────────────────────────────────────────────────────────────────────
+
+If Hugging Face API is unavailable:
+  ✓ Mock responses are automatically generated
+  ✓ Questions from pre-defined topic-specific pools
+  ✓ Evaluations based on calculated scores
+  ✓ Explanations and roadmaps are dynamically generated
+  ✓ No user-facing errors - seamless experience
+
+═══════════════════════════════════════════════════════════════════════════════
+
+COMPLETE WORKFLOW IN ONE PICTURE
+───────────────────────────────────────────────────────────────────────────────
+
+    Student Input (Topic)
+            ↓
+    [Q1] Generate Beginner MCQs (Mistral 7B)
+            ↓
+    Student Answers Round 1
+            ↓
+    [J1] Judge with Llama 70B
+            ↓
+        ├─→ Score < 50% → Performance Analysis → END
+        │
+        └─→ Score ≥ 50% → PROCEED
+                ↓
+        [Q2] Generate Advanced MCQs (Mistral 7B)
+                ↓
+        Student Answers Round 2
+                ↓
+        [J2] Judge with Llama 70B
+                ↓
+        [E] Generate Solutions (Mistral 7B)
+                ↓
+        [R] Generate Roadmap (Mistral 7B)
+                ↓
+        Final Report: Scores + Feedback + Roadmap
+
+═══════════════════════════════════════════════════════════════════════════════
