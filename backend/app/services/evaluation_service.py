@@ -48,15 +48,20 @@ async def evaluate_learning(request: LearningAnalysisRequest, model_index: int =
             json_str_end = generated_text.rfind('}') + 1
             if json_str_start != -1 and json_str_end > json_str_start:
                 json_str = generated_text[json_str_start:json_str_end]
-                evaluation_data = json.loads(json_str)
-                # Override score with calculated score
-                evaluation_data['score'] = score
-                return evaluation_data
+                try:
+                    evaluation_data = json.loads(json_str)
+                    # Override score with calculated score
+                    evaluation_data['score'] = score
+                    return evaluation_data
+                except json.JSONDecodeError as e:
+                    raise ValueError(f"Failed to decode JSON from the model's response: {e}")
             else:
                 raise ValueError("No JSON object found in the model's response.")
         else:
             raise ValueError("Unexpected response format from the model.")
 
+    except ValueError:
+        raise
     except json.JSONDecodeError as e:
         raise ValueError(f"Failed to decode JSON from the model's response: {e}")
     except Exception as e:

@@ -388,7 +388,7 @@ def generate_mock_response(prompt: str):
         # More nuanced evaluation logic based on score and topic
         if score < 40:
             strengths = [f"Initiative to learn {topic}", "Willingness to attempt challenges", "Growth mindset"]
-            weak_areas = [f"Foundational {topic} concepts", "Core terminology and definitions", "Practical application of {topic}"]
+            weak_areas = [f"Foundational {topic} concepts", "Core terminology and definitions", f"Practical application of {topic}"]
             level = "Beginner"
         elif score < 60:
             strengths = [f"Basic understanding of {topic}", "Ability to identify key concepts", f"Some practical {topic} awareness"]
@@ -404,7 +404,7 @@ def generate_mock_response(prompt: str):
             level = "Advanced"
         else:
             strengths = [f"Expert-level {topic} knowledge", "Exceptional problem-solving skills", f"Mastery of complex {topic} concepts"]
-            weak_areas = [f"Niche {topic} specializations", "Emerging {topic} technologies"]
+            weak_areas = [f"Niche {topic} specializations", f"Emerging {topic} technologies"]
             level = "Advanced"
 
         response_text = json.dumps({

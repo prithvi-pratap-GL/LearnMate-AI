@@ -18,7 +18,8 @@
       "Bash(bash /tmp/test_round1_simple.sh)",
       "Bash(curl -s -X POST http://localhost:8000/api/learning/submit-round-1 \\\\ *)",
       "Bash(npm start *)",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "Bash(HUGGING_FACE_API_KEY=test python3)"
     ],
     "additionalDirectories": [
       "\\tmp"
