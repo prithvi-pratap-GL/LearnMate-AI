@@ -347,10 +347,13 @@ def generate_mock_response(prompt: str):
         # Question generation - return topic-specific MCQ questions with dynamic options
         topic = extract_topic_from_prompt(prompt)
         difficulty = "beginner"
-        if "advanced" in prompt.lower():
+        # Check for specific difficulty level marker in prompt
+        if "Difficulty Level: advanced" in prompt:
             difficulty = "advanced"
-        elif "intermediate" in prompt.lower():
+        elif "Difficulty Level: intermediate" in prompt:
             difficulty = "intermediate"
+        elif "Difficulty Level: beginner" in prompt:
+            difficulty = "beginner"
 
         questions = generate_dynamic_questions(topic, difficulty)
         response_text = json.dumps(questions)
