@@ -14,6 +14,7 @@ Requirements for QUESTIONS:
 - Options should be realistic but distinct
 - One correct answer, three plausible distractors
 - Each question should be clear and unambiguous
+- CRITICAL: Ensure questions are UNIQUE and NOT REPEATED across different difficulty levels
 
 Requirements for OPTIONS:
 - Always provide exactly 4 options
@@ -30,25 +31,29 @@ OUTPUT FORMAT:
 - Return ONLY valid JSON array
 - No markdown, no code blocks, no explanations
 - Each question must have "question", "options" (array of 4), and "correct_answer" fields
-- No duplicate questions
+- No duplicate questions within the response
+- No questions that repeat content from other difficulty levels
 """
 
 EVALUATION_PROMPT = """
-Evaluate the learner answers.
+Act as an expert evaluator for the topic: {topic}.
+
+First, reason step-by-step internally. For each question, compare the student's answer to the correct answer, assessing for correctness, depth, and clarity.
+Based on your internal analysis, determine a score, strengths, weak areas, and a proficiency level.
+
+Finally, format your complete evaluation as a single JSON object.
+Return ONLY the valid JSON object below and nothing else.
 
 Return ONLY valid JSON:
 
 {{"score": 0, "strengths": [], "weak_areas": [], "level": ""}}
 
 Topic: {topic}
-
 Questions and Answers: {answers}
 
 Requirements:
-
-Strict JSON output
-No markdown
-No explanations outside JSON
+- Your entire output must be the JSON object.
+- No markdown, no code blocks, no explanations outside the JSON.
 """
 
 PERFORMANCE_ANALYSIS_PROMPT = """

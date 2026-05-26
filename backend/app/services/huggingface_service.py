@@ -283,20 +283,28 @@ def generate_dynamic_questions(topic: str, difficulty: str = "beginner"):
                 {"q": f"What is a real-world use of {topic}?", "correct": "Practical application", "options": ["Never used", "Practical application", "Only theory", "Only research"]},
             ]
 
-    # Shuffle and limit to 5
+    # Shuffle and limit to 5, ensuring uniqueness
     random.shuffle(questions)
     result = []
-    for q_data in questions[:5]:
-        # Shuffle options while keeping correct answer in the right position
-        options = q_data["options"].copy()
-        correct = q_data["correct"]
-        random.shuffle(options)
+    seen_questions = set()
 
-        result.append({
-            "question": q_data["q"],
-            "options": options,
-            "correct_answer": correct
-        })
+    for q_data in questions:
+        q_text = q_data["q"].lower()
+        if q_text not in seen_questions:
+            seen_questions.add(q_text)
+            # Shuffle options while keeping correct answer in the right position
+            options = q_data["options"].copy()
+            correct = q_data["correct"]
+            random.shuffle(options)
+
+            result.append({
+                "question": q_data["q"],
+                "options": options,
+                "correct_answer": correct
+            })
+
+            if len(result) >= 5:
+                break
 
     return result
 
@@ -348,7 +356,7 @@ def generate_mock_response(prompt: str):
         response_text = json.dumps(questions)
         return [{"generated_text": response_text}]
 
-    elif "Evaluate the learner answers" in prompt:
+    elif "Act as an expert evaluator" in prompt:
         # Evaluation - parse questions from prompt and calculate score
         import random
 

@@ -97,16 +97,44 @@ async def submit_round_1(request: Round1SubmissionRequest):
                 "can_proceed_to_round_2": True
             }
     except Exception as e:
-        error_msg = str(e).encode('utf-8', errors='replace').decode('utf-8')
-        raise HTTPException(status_code=500, detail=error_msg)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/generate-round-2-questions")
-async def generate_round_2_questions(request: TopicRequest):
-    """Generate advanced challenge questions for Round 2"""
+async def generate_round_2_questions(http_request: Request):
+    """Generate advanced challenge questions for Round 2, excluding Round 1 questions"""
     try:
-        questions = await question_service.generate_questions(request.topic, difficulty="advanced")
-        return {"questions": questions, "round": 2, "total_questions": len(questions)}
+        body_bytes = await http_request.body()
+        body_str = body_bytes.decode('utf-8')
+        body = json.loads(body_str)
+        topic = body.get("topic", "General")
+        round_1_questions = body.get("round_1_questions", [])
+
+        # Generate more advanced questions
+        questions = await question_service.generate_questions(topic, difficulty="advanced")
+
+        # Filter out any questions that were in Round 1
+        round_1_q_texts = {q.get("question", "").lower() for q in round_1_questions}
+        filtered_questions = [
+            q for q in questions
+            if q.get("question", "").lower() not in round_1_q_texts
+        ]
+
+        # If we filtered out too many, generate more to reach at least 5
+        if len(filtered_questions) < 5:
+            all_questions = filtered_questions
+            attempts = 0
+            while len(all_questions) < 5 and attempts < 3:
+                more_questions = await question_service.generate_questions(topic, difficulty="advanced")
+                for q in more_questions:
+                    if q.get("question", "").lower() not in round_1_q_texts and q not in all_questions:
+                        all_questions.append(q)
+                        if len(all_questions) >= 5:
+                            break
+                attempts += 1
+            filtered_questions = all_questions[:5]
+
+        return {"questions": filtered_questions[:5], "round": 2, "total_questions": len(filtered_questions[:5])}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
