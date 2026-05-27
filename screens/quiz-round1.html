@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LearnMate AI — Round 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#07070f;--surface:#0f0f1a;--surface2:#161625;--surface3:#1e1e2e;
+  --border:#ffffff12;--border2:#ffffff1e;
+  --accent:#6366f1;--accent2:#818cf8;--accent-glow:rgba(99,102,241,0.12);
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#475569;
+  --green:#22c55e;--green-bg:rgba(34,197,94,0.1);--green-border:rgba(34,197,94,0.25);
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+#starfield{position:fixed;inset:0;z-index:0;pointer-events:none}
+.glow{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;width:600px;height:400px;top:0;left:50%;transform:translateX(-50%);background:rgba(99,102,241,0.05)}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:64px;background:rgba(7,7,15,0.8);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:var(--text);text-decoration:none}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:16px;height:16px;fill:white}
+.nav-meta{display:flex;align-items:center;gap:16px}
+.topic-pill{font-size:12px;font-weight:500;padding:5px 14px;border-radius:100px;background:var(--accent-glow);border:1px solid rgba(99,102,241,0.25);color:var(--accent2)}
+.round-badge{font-size:12px;font-weight:600;font-family:'Syne',sans-serif;padding:5px 14px;border-radius:100px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);color:var(--text2)}
+.btn-exit{font-size:13px;color:var(--text3);background:none;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;transition:color 0.2s,background 0.2s}
+.btn-exit:hover{color:var(--text2);background:rgba(255,255,255,0.05)}
+
+/* Main layout */
+.page{position:relative;z-index:1;min-height:100vh;padding:88px 24px 60px;display:flex;flex-direction:column;align-items:center}
+.quiz-shell{width:100%;max-width:680px}
+
+/* Progress */
+.progress-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.progress-label{font-size:13px;color:var(--text2)}
+.progress-label strong{color:var(--text);font-weight:600}
+.progress-bar{display:flex;gap:6px;margin-bottom:36px}
+.seg{flex:1;height:4px;border-radius:100px;background:rgba(255,255,255,0.08);transition:background 0.3s}
+.seg.done{background:var(--accent)}
+.seg.active{background:rgba(99,102,241,0.5)}
+
+/* Question card */
+.q-card{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:18px;
+  padding:36px 36px 28px;
+  animation:fadeUp 0.35s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+.q-header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.q-num{width:34px;height:34px;border-radius:50%;background:var(--accent-glow);border:1px solid rgba(99,102,241,0.25);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent2)}
+.q-tag{font-size:12px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3)}
+.q-text{font-size:18px;font-weight:400;line-height:1.65;color:var(--text);margin-bottom:28px}
+
+/* Options */
+.options{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.option{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 18px;
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--border2);
+  border-radius:12px;cursor:pointer;
+  transition:border-color 0.15s,background 0.15s,transform 0.1s;
+  user-select:none;
+}
+.option:hover{border-color:rgba(99,102,241,0.35);background:var(--accent-glow)}
+.option:active{transform:scale(0.99)}
+.option.selected{border-color:var(--accent);background:rgba(99,102,241,0.1)}
+.opt-letter{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:600;font-family:'Syne',sans-serif;
+  background:rgba(255,255,255,0.06);border:1px solid var(--border2);
+  color:var(--text2);transition:background 0.15s,border-color 0.15s,color 0.15s;
+}
+.option.selected .opt-letter{background:var(--accent);border-color:var(--accent);color:white}
+.opt-text{font-size:15px;color:var(--text2);transition:color 0.15s}
+.option.selected .opt-text{color:var(--text)}
+
+/* Nav buttons */
+.q-nav{display:flex;align-items:center;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border)}
+.btn-prev,.btn-next{
+  display:flex;align-items:center;gap:8px;
+  font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;
+  padding:10px 20px;border-radius:9px;border:none;cursor:pointer;
+  transition:background 0.15s,color 0.15s,transform 0.1s;
+}
+.btn-prev{background:rgba(255,255,255,0.05);color:var(--text2)}
+.btn-prev:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+.btn-prev svg,.btn-next svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5}
+.btn-next{background:var(--accent);color:white}
+.btn-next:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-next:disabled{opacity:0.35;cursor:not-allowed;transform:none}
+.q-counter{font-size:13px;color:var(--text3)}
+
+/* Submit area */
+.submit-area{margin-top:24px;animation:fadeUp 0.3s ease both}
+.unanswered-note{
+  text-align:center;font-size:13px;color:var(--text3);
+  margin-bottom:14px;
+}
+.unanswered-note strong{color:var(--accent2)}
+.btn-submit{
+  width:100%;padding:15px;
+  background:var(--accent);color:white;
+  font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;
+  border:none;border-radius:12px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:background 0.2s,transform 0.15s,box-shadow 0.2s;
+}
+.btn-submit:hover:not(:disabled){background:var(--accent2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(99,102,241,0.3)}
+.btn-submit:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-submit svg{width:16px;height:16px;stroke:white;fill:none;stroke-width:2.5}
+
+/* Answered dots */
+.dots-row{display:flex;gap:8px;justify-content:center;margin-top:20px}
+.dot-q{
+  width:8px;height:8px;border-radius:50%;cursor:pointer;
+  background:rgba(255,255,255,0.1);
+  border:1px solid var(--border2);
+  transition:background 0.2s,border-color 0.2s,transform 0.15s;
+}
+.dot-q.answered{background:var(--green);border-color:transparent}
+.dot-q.current{border-color:var(--accent);transform:scale(1.3)}
+.dot-q:hover{border-color:rgba(99,102,241,0.4)}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="glow"></div>
+
+<nav>
+  <a href="01-homepage.html" class="nav-logo">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M13 2L4.09 12.26c-.36.44-.55.66-.55.88 0 .2.08.39.21.53.15.16.36.33.88.33H12l-1 8 8.91-10.26c.36-.44.55-.66.55-.88a.72.72 0 0 0-.21-.53c-.15-.16-.36-.33-.88-.33H13l1-8z"/></svg></div>
+    LearnMate AI
+  </a>
+  <div class="nav-meta">
+    <span class="topic-pill">Python</span>
+    <span class="round-badge">Round 1 — Foundations</span>
+    <button class="btn-exit" onclick="if(confirm('Exit assessment?')) window.location.href='01-homepage.html'">✕ Exit</button>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="quiz-shell">
+    <div class="progress-header">
+      <span class="progress-label">Question <strong id="pLabel">1</strong> of 5</span>
+      <span class="progress-label" id="answeredLabel">0 answered</span>
+    </div>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <div class="q-card" id="qCard">
+      <div class="q-header">
+        <div class="q-num" id="qNum">1</div>
+        <span class="q-tag">Multiple choice</span>
+      </div>
+      <p class="q-text" id="qText"></p>
+      <div class="options" id="optionsContainer"></div>
+      <div class="q-nav">
+        <button class="btn-prev" id="btnPrev" onclick="navigate(-1)">
+          <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Previous
+        </button>
+        <span class="q-counter" id="qCounter"></span>
+        <button class="btn-next" id="btnNext" onclick="navigate(1)">
+          Next
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="dots-row" id="dotsRow"></div>
+
+    <div class="submit-area" id="submitArea" style="display:none">
+      <div class="unanswered-note" id="unansweredNote"></div>
+      <button class="btn-submit" id="btnSubmit" onclick="window.location.href='05-results-round2.html'">
+        Submit Round 1 — Analyse My Answers
+        <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Starfield */
+const canvas=document.getElementById('starfield'),ctx=canvas.getContext('2d');
+let stars=[],W,H;
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+function init(){stars=Array.from({length:140},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.2,o:Math.random()*0.5+0.1,tw:Math.random()*Math.PI*2,ts:Math.random()*0.012+0.003,spd:Math.random()*0.07+0.01}))}
+function draw(){ctx.clearRect(0,0,W,H);stars.forEach(s=>{s.tw+=s.ts;const op=s.o*(0.5+0.5*Math.sin(s.tw));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(200,210,255,${op})`;ctx.fill();s.x-=s.spd;if(s.x<-2){s.x=W+2;s.y=Math.random()*H}});requestAnimationFrame(draw)}
+window.addEventListener('resize',()=>{resize();init()});resize();init();draw();
+
+/* Quiz data */
+const questions=[
+  {q:"What is the output of `type([])` in Python?",opts:["<class 'list'>","<class 'array'>","<class 'tuple'>","<class 'dict'>"]},
+  {q:"Which keyword is used to define a function in Python?",opts:["function","define","def","func"]},
+  {q:"What does the `len()` function return when called on a string?",opts:["Number of words","Number of characters","Number of bytes","Number of lines"]},
+  {q:"Which of the following is an immutable data type in Python?",opts:["list","dict","set","tuple"]},
+  {q:"What is the correct way to create a virtual environment in Python 3?",opts:["python -m venv env","python --virtualenv env","pip create venv env","python3 --env create"]},
+];
+
+let current=0;
+let answers=Array(questions.length).fill(null);
+
+const letters=['A','B','C','D'];
+
+function renderProgressBar(){
+  const pb=document.getElementById('progressBar');
+  pb.innerHTML=questions.map((_,i)=>`<div class="seg ${i<current?'done':i===current?'active':''}" id="seg${i}"></div>`).join('');
+}
+
+function renderDots(){
+  const dr=document.getElementById('dotsRow');
+  dr.innerHTML=questions.map((_,i)=>`<div class="dot-q ${answers[i]!==null?'answered':''} ${i===current?'current':''}" onclick="goTo(${i})"></div>`).join('');
+}
+
+function updateAnsweredLabel(){
+  const n=answers.filter(a=>a!==null).length;
+  document.getElementById('answeredLabel').textContent=`${n} of ${questions.length} answered`;
+}
+
+function updateSubmitArea(){
+  const n=answers.filter(a=>a!==null).length;
+  const area=document.getElementById('submitArea');
+  const note=document.getElementById('unansweredNote');
+  const btn=document.getElementById('btnSubmit');
+  if(current===questions.length-1){
+    area.style.display='block';
+    const rem=questions.length-n;
+    if(rem>0){
+      note.innerHTML=`Answer <strong>${rem} more question${rem>1?'s':''}</strong> to submit`;
+      btn.disabled=true;
+    } else {
+      note.textContent='All questions answered — ready to submit!';
+      btn.disabled=false;
+    }
+  } else {
+    area.style.display='none';
+  }
+}
+
+function renderQuestion(){
+  const q=questions[current];
+  document.getElementById('qNum').textContent=current+1;
+  document.getElementById('pLabel').textContent=current+1;
+  document.getElementById('qCounter').textContent=`${current+1} / ${questions.length}`;
+  document.getElementById('qText').textContent=q.q;
+
+  const container=document.getElementById('optionsContainer');
+  container.innerHTML=q.opts.map((opt,i)=>`
+    <div class="option ${answers[current]===opt?'selected':''}" onclick="selectOption('${opt.replace(/'/g,"\\'")}')">
+      <div class="opt-letter">${letters[i]}</div>
+      <div class="opt-text">${opt}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('btnPrev').style.visibility=current===0?'hidden':'visible';
+  document.getElementById('btnNext').textContent=current===questions.length-1?'':'Next';
+  if(current===questions.length-1){
+    document.getElementById('btnNext').style.display='none';
+  } else {
+    document.getElementById('btnNext').style.display='flex';
+  }
+
+  // re-animate card
+  const card=document.getElementById('qCard');
+  card.style.animation='none';
+  void card.offsetWidth;
+  card.style.animation='fadeUp 0.3s ease both';
+
+  renderProgressBar();
+  renderDots();
+  updateAnsweredLabel();
+  updateSubmitArea();
+}
+
+function selectOption(opt){
+  answers[current]=opt;
+  renderQuestion();
+}
+
+function navigate(dir){
+  const next=current+dir;
+  if(next>=0&&next<questions.length){current=next;renderQuestion()}
+}
+function goTo(i){current=i;renderQuestion()}
+
+renderQuestion();
+</script>
+</body>
+</html>
