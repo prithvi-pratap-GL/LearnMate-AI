@@ -141,3 +141,41 @@ Include:
 
 Make the roadmap highly specific to {topic} with concrete examples, technical terms, and {topic}-related project ideas.
 """
+
+LLM_JUDGE_PROMPT = """
+You are an educational evaluator.
+
+Evaluate the student's answer fairly.
+
+Question:
+{question}
+
+Correct Answer:
+{correct_answer}
+
+Student Answer:
+{student_answer}
+
+Return ONLY valid JSON:
+
+{
+  "correct": true,
+  "score": 1,
+  "reason": "short explanation"
+}
+
+Rules:
+
+1. Be strict but fair
+2. Accept conceptually correct answers
+3. Reject unrelated or incorrect answers
+4. score must be:
+
+- 1 = correct
+- 0 = incorrect
+
+5. reason must be concise
+6. No markdown
+7. No extra text
+8. Output ONLY JSON
+"""
