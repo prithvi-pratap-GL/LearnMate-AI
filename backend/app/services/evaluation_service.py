@@ -1,68 +1,129 @@
 import json
-from app.services.huggingface_service import query_model, calculate_score_from_answers
+import logging
+
+from app.services.huggingface_service import (
+    query_model,
+    calculate_score_from_answers,
+)
 from app.utils.prompts import EVALUATION_PROMPT
 from app.models.schemas import LearningAnalysisRequest
 
-# Model options for evaluation (ordered by preference)
+log = logging.getLogger(__name__)
+
+# Evaluation model preference order
 EVALUATION_MODELS = [
-    "meta-llama/Llama-2-70b-chat-hf",  # High-quality evaluation model
-    "mistralai/Mistral-Large-Instruct-2407",  # Good alternative
-    "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO",  # Community-validated model
-    "mistralai/Mistral-7B-Instruct-v0.2",  # Fallback to smaller model
+    "meta-llama/Llama-2-70b-chat-hf",
+    "mistralai/Mistral-Large-Instruct-2407",
+    "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO",
+    "mistralai/Mistral-7B-Instruct-v0.2",
 ]
 
-async def evaluate_learning(request: LearningAnalysisRequest, model_index: int = 0):
+
+async def evaluate_learning(
+    request: LearningAnalysisRequest,
+    model_index: int = 0,
+):
     """
-    Evaluates the learner's answers using a specialized evaluation LLM.
-    Uses a different (more capable) model than question generation for better judging.
-    Calculates score by comparing student answers with correct answers.
+    Evaluate learner answers using multi-model failover.
+
+    Flow:
+    Preferred model
+        ↓
+    Fail?
+        ↓
+    Try next model
+        ↓
+    Parse JSON
+        ↓
+    Return evaluation
     """
-    # Calculate score by comparing answers
+
+    # Prepare answer payload
     questions_list = [
         {
             "question": q.question,
             "student_answer": q.student_answer,
-            "correct_answer": q.correct_answer
+            "correct_answer": q.correct_answer,
         }
         for q in request.questions
     ]
 
+    # Deterministic scoring
     score = calculate_score_from_answers(questions_list)
 
-    # Format answers as JSON for proper parsing in mock response
-    answers_json = json.dumps(questions_list)
-    answers_str = f"Score: {score}\n\n" + answers_json
+    answers_json = json.dumps(
+        questions_list,
+        ensure_ascii=False,
+    )
 
-    prompt = EVALUATION_PROMPT.format(topic=request.topic, answers=answers_str)
+    answers_str = f"Score: {score}\n\n" f"{answers_json}"
 
-    try:
-        # Use specialized evaluation model (different from question generation model)
-        selected_model = EVALUATION_MODELS[model_index] if model_index < len(EVALUATION_MODELS) else EVALUATION_MODELS[0]
-        response = await query_model(prompt, model=selected_model)
+    prompt = EVALUATION_PROMPT.format(
+        topic=request.topic,
+        answers=answers_str,
+    )
 
-        # The response from the model is often a list with one item
-        if isinstance(response, list) and len(response) > 0:
-            generated_text = response[0].get('generated_text', '{}')
-            # Find the last JSON object in the response (to handle case where prompt is repeated)
-            json_str_start = generated_text.rfind('{')
-            json_str_end = generated_text.rfind('}') + 1
-            if json_str_start != -1 and json_str_end > json_str_start:
-                json_str = generated_text[json_str_start:json_str_end]
-                try:
-                    evaluation_data = json.loads(json_str)
-                    # Override score with calculated score
-                    evaluation_data['score'] = score
-                    return evaluation_data
-                except json.JSONDecodeError as e:
-                    raise ValueError(f"Failed to decode JSON from the model's response: {e}")
-            else:
-                raise ValueError("No JSON object found in the model's response.")
-        else:
-            raise ValueError("Unexpected response format from the model.")
+    # Start from preferred model index
+    candidate_models = EVALUATION_MODELS[model_index:] + EVALUATION_MODELS[:model_index]
 
-    except ValueError:
-        raise
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to decode JSON from the model's response: {e}")
-    except Exception as e:
-        raise e
+    last_error = None
+
+    for model in candidate_models:
+
+        try:
+
+            log.info(f"[EVAL] Trying model: {model}")
+
+            response = await query_model(
+                prompt,
+                model=model,
+            )
+
+            if not (isinstance(response, list) and len(response) > 0):
+                raise ValueError("Unexpected response format.")
+
+            generated_text = response[0].get(
+                "generated_text",
+                "{}",
+            )
+
+            print("\n===== EVALUATION RAW OUTPUT =====\n")
+            print(generated_text)
+            print("\n===============================\n")
+
+            # safer extraction
+            json_start = generated_text.find("{")
+            json_end = generated_text.rfind("}") + 1
+
+            if json_start == -1 or json_end <= json_start:
+                raise ValueError("No JSON object found.")
+
+            json_str = generated_text[json_start:json_end]
+
+            evaluation_data = json.loads(json_str)
+
+            # authoritative score
+            evaluation_data["score"] = score
+
+            log.info(f"[EVAL] Success using {model}")
+
+            return evaluation_data
+
+        except (
+            json.JSONDecodeError,
+            ValueError,
+        ) as e:
+
+            log.warning(f"[EVAL] Parse failed " f"for {model}: {e}")
+
+            last_error = e
+            continue
+
+        except Exception as e:
+
+            log.warning(f"[EVAL] Model failed " f"{model}: {e}")
+
+            last_error = e
+            continue
+
+    raise RuntimeError("All evaluation models failed. " f"Last error: {last_error}")

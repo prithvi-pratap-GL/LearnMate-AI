@@ -33,8 +33,8 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=8000,
         reload=False,
-        access_log=False,
-        log_level="critical",
+        access_log=True,
+        log_level="debug",
         workers=1,
         loop="asyncio",
     )
