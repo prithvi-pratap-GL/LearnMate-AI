@@ -65,11 +65,27 @@ async def generate_questions(http_request: Request):
         body = json.loads(body_str)
         topic = sanitize_input(body.get("topic", "General"))
 
-        questions = await question_service.generate_questions(
-            topic, difficulty="beginner"
+        result = await question_service.generate_questions(
+            topic,
+            difficulty="beginner"
         )
-        questions = questions[:ROUND_1_QUESTION_COUNT]
-        return {"questions": questions, "round": 1, "total_questions": len(questions)}
+
+        questions = result["questions"][
+            :ROUND_1_QUESTION_COUNT
+        ]
+
+        return {
+            "questions": questions,
+            "round": 1,
+            "total_questions": len(
+                questions
+            ),
+            "source": result.get(
+                "source",
+                "llm",
+            ),
+        }
+    
     except Exception as e:
         log.error(f"Failed to generate questions: {e}", exc_info=True)
         raise HTTPException(

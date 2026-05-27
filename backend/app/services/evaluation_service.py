@@ -79,6 +79,15 @@ async def evaluate_learning(
                 model=model,
             )
 
+            is_mock = False
+
+            if (
+                isinstance(response, dict)
+                and response.get("mock")
+            ):
+                is_mock = True
+                response = response["data"]
+
             if not (isinstance(response, list) and len(response) > 0):
                 raise ValueError("Unexpected response format.")
 
@@ -103,7 +112,11 @@ async def evaluate_learning(
             evaluation_data = json.loads(json_str)
 
             # authoritative score
-            evaluation_data["score"] = score
+            evaluation_data["source"] = (
+                "mock"
+                if is_mock
+                else "llm"
+            )
 
             log.info(f"[EVAL] Success using {model}")
 

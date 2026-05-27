@@ -1,33 +1,161 @@
+# Issue Resolution Log: LLM Integration & Question Generation Stabilization
 
-# Identified Project Issues
+## Overview
 
-This document lists potential issues and areas for improvement within the LearnMate AI project.
+Resolved multiple issues related to LLM integration, model routing, JSON parsing, and AI-generated question validation in the LearnMate-AI backend.
 
-## 1. Conflicting Backend Server Implementations
+---
 
-- **Issue:** There are three separate Python scripts for running the server: `start.py`, `run_server.py`, and `minimal_server.py`.
-- **Details:**
-    - `start.py` runs a FastAPI server on port `8000`.
-    - `run_server.py` runs a FastAPI server on port `5000` for development.
-    - `minimal_server.py` implements a completely separate server using `aiohttp` which duplicates some of the application logic.
-- **Impact:** This is confusing for new developers. The presence of `minimal_server.py` suggests either abandoned work or an undocumented alternative, leading to maintenance overhead.
-- **Recommendation:** Deprecate and remove `minimal_server.py`. Consolidate `start.py` and `run_server.py` or clarify their roles in the documentation. The port difference between dev and prod for the backend can also cause confusion.
+## Problems Identified
 
+### 1. HuggingFace Router Integration Failure
+**Issue:**  
+LLM requests returned `404 Not Found`.
 
-## 2. Missing `.env.example` File
+**Root Cause:**  
+The project used HuggingFace Router Chat Completions endpoint with an incompatible inference payload and malformed URL construction.
 
-- **Issue:** The project requires a `.env` file for the backend, but there is no example file.
-- **Impact:** Developers have to read the source code (`backend/app/config/settings.py`) or the `README.md` to know which environment variables are required.
-- **Recommendation:** Add a `.env.example` file to the `backend` directory that lists all required environment variables with placeholder values.
+**Fix:**  
+- Preserved original request-based pipeline
+- Updated `query_model()` to use:
+  - HF Router Chat Completions API
+  - correct payload structure
+  - proper model routing
 
-## 3. Suppressed server logs, & degub mode was set to critical
+---
 
-- **Issue:** The server logs were suppressed in the backend, so when you run the server, it doesn't print any logs. The debug mode was set to critical, which suppressed the important logs.
-- **Impact:** This can make it difficult to debug issues and understand the behavior of the server.
-- **Recommendation:** Enable these logs and set the debug mode to info.
+### 2. Mock Response Fallback Masking Errors
+**Issue:**  
+Application silently returned mock questions while real API requests failed.
 
-## 4. No guardrails in the question_service.py for the llm output.
+**Root Cause:**  
+Broad exception handling triggered `generate_mock_response()` for all failures.
 
-- **Issue:** There is no guardrails in the question_service.py for the llm output.
-- **Impact:** If the llm output fails, the system will not retry with feedback.
-- **RESOLUTION:** AddED guardrails in the question_service.py for the llm output using pydantic. And added a failover mechanism to retry with feedback if the llm output fails.
+**Fix:**  
+- Added debugging visibility
+- Improved logging
+- Identified real API failures instead of hidden fallback behavior
+
+---
+
+### 3. Unsupported Evaluation Models
+**Issue:**  
+Round-1 evaluation failed with `400 model_not_supported`.
+
+**Root Cause:**  
+Hardcoded evaluation models were unsupported by enabled HF providers.
+
+**Fix:**  
+Implemented **multi-model failover**:
+
+```text
+Preferred model
+↓
+Failure
+↓
+Automatically try next model
+```
+
+This preserved original architecture while improving resilience.
+
+---
+
+### 4. Fragile LLM JSON Parsing
+**Issue:**  
+AI responses frequently caused:
+
+- JSONDecodeError
+- malformed arrays
+- duplicated keys
+- broken quotes
+- nested JSON
+
+**Root Cause:**  
+Parser relied on naive `find()` / `rfind()` extraction and assumed valid JSON.
+
+**Fix:**  
+Implemented:
+
+- `JSONDecoder.raw_decode()`
+- `json_repair`
+- safer extraction logic
+
+---
+
+### 5. Missing Schema Validation
+**Issue:**  
+Invalid MCQ structures passed parsing but contained unusable content.
+
+Examples:
+- missing fields
+- invalid options
+- incorrect answer mismatch
+
+**Fix:**  
+Added **Pydantic validation** using `MCQQuestion`.
+
+Validated:
+
+- question quality
+- exactly 4 options
+- unique options
+- answer-option consistency
+
+---
+
+### 6. LLM Output Reliability Issues
+**Issue:**  
+Open models occasionally returned malformed or incomplete JSON.
+
+**Fix:**  
+Implemented **correction retry pipeline**.
+
+Flow:
+
+```text
+LLM
+↓
+Parse
+↓
+Repair
+↓
+Validate
+↓
+Retry with correction prompt
+↓
+Return validated questions
+```
+
+---
+
+## Final Result
+
+Question generation pipeline is now significantly more stable and fault tolerant.
+
+Current architecture:
+
+```text
+HF Router
+↓
+query_model()
+↓
+raw_decode
+↓
+json_repair
+↓
+Pydantic validation
+↓
+Correction retry
+↓
+Validated MCQs
+```
+
+---
+
+## Outcome
+
+- Stable HF LLM integration
+- Reduced parsing failures
+- Improved question reliability
+- Preserved original architecture
+- Added resilience without replacing core pipeline
