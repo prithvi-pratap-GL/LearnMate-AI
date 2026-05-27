@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import ResultsDashboard from '../components/ResultsDashboard';
+import toast from "react-hot-toast";
 
 // --- Interfaces ---
 interface IQuestion {
@@ -78,7 +79,7 @@ const QuizPage: React.FC = () => {
       setQuestions(generatedQuestions);
       setCurrentRound(1);
     } catch (err) {
-      setError('Failed to generate questions. Please try again.');
+      toast.error('Failed to generate questions. Please try again.');
       console.error('Error generating questions', err);
     } finally {
       setGeneratingQuestions(false);
@@ -108,6 +109,8 @@ const QuizPage: React.FC = () => {
 
       if (data.can_proceed_to_round_2) {
         // User passed Round 1, prepare for Round 2
+        toast.success(
+      'Great! Moving to Round 2');
         setRound1Evaluation(data.evaluation);
         setRound1Score(data.score);
         setRound1Questions(questions);
@@ -125,7 +128,7 @@ const QuizPage: React.FC = () => {
         setCurrentRound(0);
       }
     } catch (err) {
-      setError('Failed to submit Round 1. Please try again.');
+      toast.error('Round 1 submission failed.');
       console.error('Error submitting Round 1', err);
     } finally {
       setLoading(false);
@@ -147,7 +150,7 @@ const QuizPage: React.FC = () => {
       setQuestions(generatedQuestions);
       setCurrentRound(2);
     } catch (err) {
-      setError('Failed to generate Round 2 questions. Please try again.');
+      toast.error('Failed to generate Round 2 questions. Please try again.');
       console.error('Error generating Round 2 questions', err);
     } finally {
       setGeneratingQuestions(false);
@@ -180,7 +183,7 @@ const QuizPage: React.FC = () => {
       });
       setCurrentRound(0);
     } catch (err) {
-      setError('Failed to submit Round 2. Please try again.');
+      toast.error('Failed to submit Round 2. Please try again.');
       console.error('Error submitting Round 2', err);
     } finally {
       setLoading(false);
