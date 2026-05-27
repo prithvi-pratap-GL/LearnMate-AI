@@ -1,3 +1,4 @@
+import logging
 import aiohttp
 import random
 import re
@@ -12,42 +13,68 @@ headers = {
     "Content-Type": "application/json",
 }
 
-# async def query_model(
-#     prompt: str, model: str = "meta-llama/Llama-3.1-8B-Instruct:novita"
-# ):
-#     """
-#     Query HuggingFace Router using OpenAI-compatible SDK.
-#     Falls back to mock only if API fails.
-#     """
-
-#     try:
-
-#         response = await client.chat.completions.create(
-#             model=model,
-#             messages=[{"role": "user", "content": prompt}],
-#             temperature=0.7,
-#             max_tokens=1200,
-#         )
-
-#         generated_text = response.choices[0].message.content
-
-#         return [{"generated_text": generated_text}]
-
-#     except Exception as e:
-#         print(f"[HF ROUTER ERROR] {e}")
-#         print("[INFO] Falling back to mock response")
-
-#         return generate_mock_response(prompt)
-
-
-import aiohttp
-import logging
 
 log = logging.getLogger(__name__)
 
 
+# async def query_model(
+#     prompt: str, model: str = "meta-llama/Llama-3.1-8B-Instruct:novita"
+# ):
+#     """
+#     Query HF Router using Chat Completions API.
+#     """
+
+#     session_timeout = aiohttp.ClientTimeout(total=60)
+
+#     payload = {
+#         "model": model,
+#         "messages": [{"role": "user", "content": prompt}],
+#         "temperature": 0.7,
+#         "max_tokens": 1200,
+#     }
+
+#     try:
+
+#         async with aiohttp.ClientSession(timeout=session_timeout) as session:
+
+#             async with session.post(API_URL, headers=headers, json=payload) as response:
+
+#                 response.raise_for_status()
+
+#                 data = await response.json()
+
+#                 generated_text = data["choices"][0]["message"]["content"]
+
+#                 return [{"generated_text": generated_text}]
+
+#     except aiohttp.ClientResponseError as e:
+#         log.error(f"HF Router HTTP Error {e.status}: {e.message}")
+
+#         if settings.DEBUG:
+#             return generate_mock_response(prompt)
+
+#         raise
+
+#     except aiohttp.ClientError as e:
+#         log.error(f"HF Router Connection Error: {e}")
+
+#         if settings.DEBUG:
+#             return generate_mock_response(prompt)
+
+#         raise
+
+#     except Exception as e:
+#         log.exception(f"Unexpected model error: {e}")
+
+#         if settings.DEBUG:
+#             return generate_mock_response(prompt)
+
+#         raise
+
+
 async def query_model(
-    prompt: str, model: str = "meta-llama/Llama-3.1-8B-Instruct:novita"
+    prompt: str,
+    model: str = "meta-llama/Llama-3.1-8B-Instruct:novita",
 ):
     """
     Query HF Router using Chat Completions API.
@@ -57,7 +84,12 @@ async def query_model(
 
     payload = {
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
         "temperature": 0.7,
         "max_tokens": 1200,
     }
@@ -66,7 +98,11 @@ async def query_model(
 
         async with aiohttp.ClientSession(timeout=session_timeout) as session:
 
-            async with session.post(API_URL, headers=headers, json=payload) as response:
+            async with session.post(
+                API_URL,
+                headers=headers,
+                json=payload,
+            ) as response:
 
                 response.raise_for_status()
 
@@ -74,29 +110,45 @@ async def query_model(
 
                 generated_text = data["choices"][0]["message"]["content"]
 
+                # REAL LLM RESPONSE
                 return [{"generated_text": generated_text}]
 
     except aiohttp.ClientResponseError as e:
-        log.error(f"HF Router HTTP Error {e.status}: {e.message}")
+
+        log.error(f"HF Router HTTP Error " f"{e.status}: {e.message}")
 
         if settings.DEBUG:
-            return generate_mock_response(prompt)
+
+            return {
+                "mock": True,
+                "data": generate_mock_response(prompt),
+            }
 
         raise
 
     except aiohttp.ClientError as e:
+
         log.error(f"HF Router Connection Error: {e}")
 
         if settings.DEBUG:
-            return generate_mock_response(prompt)
+
+            return {
+                "mock": True,
+                "data": generate_mock_response(prompt),
+            }
 
         raise
 
     except Exception as e:
+
         log.exception(f"Unexpected model error: {e}")
 
         if settings.DEBUG:
-            return generate_mock_response(prompt)
+
+            return {
+                "mock": True,
+                "data": generate_mock_response(prompt),
+            }
 
         raise
 
