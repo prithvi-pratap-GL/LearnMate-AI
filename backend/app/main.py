@@ -7,6 +7,8 @@ import io
 
 # NEW
 from app.safety.middleware import SafetyMiddleware
+from app.models.database import Base
+from app.db.database import engine
 
 # FORCEFULLY set UTF-8 encoding
 if sys.stdout.encoding.lower() != 'utf-8':
@@ -22,6 +24,9 @@ if sys.stderr.encoding.lower() != 'utf-8':
         encoding='utf-8',
         errors='replace'
     )
+
+# Create database tables on startup
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 

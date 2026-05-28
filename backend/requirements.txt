@@ -5,3 +5,6 @@ pydantic-settings
 requests
 python-dotenv
 aiohttp
+sqlalchemy
+psycopg2-binary
+alembic

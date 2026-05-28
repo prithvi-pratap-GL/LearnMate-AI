@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ResultsDashboard from '../components/ResultsDashboard';
+import { AskAI } from '../components/AskAI';
 import toast from 'react-hot-toast';
 import type { IQuestion, IEvaluation, IAnalysisResult } from '../types';
 
@@ -24,7 +25,24 @@ const QuizPage: React.FC = () => {
   const [round1Evaluation, setRound1Evaluation] = useState<IEvaluation | null>(null);
   const [round1Score, setRound1Score] = useState<number | null>(null);
   const [round1Questions, setRound1Questions] = useState<IQuestion[]>([]);
+  const [sessionUuid, setSessionUuid] = useState<string>('');
+  const [aiHelpByQuestion, setAiHelpByQuestion] = useState<Record<number, string>>({});
+  const [questionSeconds, setQuestionSeconds] = useState(0);
+  const [totalSeconds, setTotalSeconds] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Timer interval
+  useEffect(() => {
+    if (!timerRunning || currentRound === 0 || result) return;
+
+    const interval = setInterval(() => {
+      setTotalSeconds(prev => prev + 1);
+      setQuestionSeconds(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerRunning, currentRound, result]);
 
   // Starfield for setup screen
   useEffect(() => {
@@ -92,6 +110,14 @@ const QuizPage: React.FC = () => {
     setGeneratingQuestions(true);
 
     try {
+      // Create session first
+      const sessionResponse = await axios.post(`${API_BASE}/api/learning/create-session`, {
+        student_name: studentName,
+        topic,
+        round: 1
+      });
+      setSessionUuid(sessionResponse.data.session_uuid);
+
       const response = await axios.post(`${API_BASE}/api/learning/generate-questions`, { topic });
       const generatedQuestions = response.data.questions.map((q: ApiQuestion) => ({
         question: q.question,
@@ -102,6 +128,10 @@ const QuizPage: React.FC = () => {
       setQuestions(generatedQuestions);
       setCurrentRound(1);
       setCurrentQuestion(0);
+      setAiHelpByQuestion({});
+      setQuestionSeconds(0);
+      setTotalSeconds(0);
+      setTimerRunning(true);
     } catch (err) {
       toast.error('Failed to generate questions. Please try again.');
       console.error('Error generating questions', err);
@@ -114,6 +144,32 @@ const QuizPage: React.FC = () => {
     const newQuestions = [...questions];
     newQuestions[index].student_answer = answer;
     setQuestions(newQuestions);
+  };
+
+  const saveQuestionTiming = async (questionIndex: number, timeSpent: number) => {
+    if (!sessionUuid) return;
+
+    try {
+      const q = questions[questionIndex];
+      await axios.post(`${API_BASE}/api/learning/save-question-timing`, {
+        session_uuid: sessionUuid,
+        question_index: questionIndex,
+        question_text: q.question,
+        time_spent_seconds: timeSpent,
+        student_answer: q.student_answer,
+        correct_answer: q.correct_answer,
+        ai_help_type: aiHelpByQuestion[questionIndex] || null
+      });
+    } catch (err) {
+      console.error('Error saving question timing:', err);
+    }
+  };
+
+  const handleAIHelpUsed = (questionIndex: number, helpType: string) => {
+    setAiHelpByQuestion(prev => ({
+      ...prev,
+      [questionIndex]: helpType
+    }));
   };
 
   const handleSubmitRound1 = async (e: React.FormEvent) => {
@@ -217,7 +273,19 @@ const QuizPage: React.FC = () => {
     }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    // Complete current session if it exists
+    if (sessionUuid) {
+      try {
+        await axios.post(`${API_BASE}/api/learning/complete-session`, {
+          session_uuid: sessionUuid,
+          status: 'abandoned'
+        });
+      } catch (err) {
+        console.error('Error completing session:', err);
+      }
+    }
+
     setStudentName('');
     setTopic('');
     setQuestions([]);
@@ -227,12 +295,21 @@ const QuizPage: React.FC = () => {
     setRound1Evaluation(null);
     setRound1Score(null);
     setRound1Questions([]);
+    setSessionUuid('');
+    setAiHelpByQuestion({});
+    setQuestionSeconds(0);
+    setTotalSeconds(0);
+    setTimerRunning(false);
   };
 
-  const handleNavigateQuestion = (direction: number) => {
+  const handleNavigateQuestion = async (direction: number) => {
     const next = currentQuestion + direction;
     if (next >= 0 && next < questions.length) {
+      // Save timing for current question before moving
+      await saveQuestionTiming(currentQuestion, questionSeconds);
+
       setCurrentQuestion(next);
+      setQuestionSeconds(0);
     }
   };
 
@@ -329,6 +406,41 @@ const QuizPage: React.FC = () => {
             <div className="flex items-center gap-6">
               <span className="text-xs px-3 py-1 rounded-full bg-[var(--accent-glow)] border border-[rgba(99,102,241,0.25)] text-[var(--accent2)]">{topic}</span>
               <span className="text-xs px-3 py-1 rounded-full bg-[rgba(255,255,255,0.05)] border border-[var(--border2)] text-[var(--text2)]">{roundLabel}</span>
+
+              {/* Timer in navbar */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1 bg-[rgba(99,102,241,0.1)] border border-[rgba(99,102,241,0.3)] rounded-lg">
+                  <span className="text-xs font-mono text-[var(--accent2)] font-bold min-w-[50px]">
+                    Q: {String(Math.floor(questionSeconds / 60)).padStart(2, '0')}:{String(questionSeconds % 60).padStart(2, '0')}
+                  </span>
+                  <span className="text-[var(--border2)]">|</span>
+                  <span className="text-xs font-mono text-[var(--text2)] min-w-[50px]">
+                    {String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:{String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}:{String(totalSeconds % 60).padStart(2, '0')}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => setTimerRunning(!timerRunning)}
+                  className="p-1 text-[var(--text2)] hover:text-[var(--accent2)] transition"
+                  title={timerRunning ? "Pause" : "Resume"}
+                >
+                  {timerRunning ? (
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setQuestionSeconds(0)}
+                  disabled={!timerRunning}
+                  className="p-1 text-[var(--text2)] hover:text-[var(--accent2)] disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  title="Reset question timer"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64M3.51 15A9 9 0 0 0 18.36 18.36"/></svg>
+                </button>
+              </div>
+
               <button onClick={handleReset} className="text-sm text-[var(--text3)] hover:text-[var(--text2)] transition">✕ Exit</button>
             </div>
           </div>
@@ -364,6 +476,15 @@ const QuizPage: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {/* Ask AI Component */}
+            <AskAI
+              sessionUuid={sessionUuid}
+              questionIndex={currentQuestion}
+              questionText={currentQ.question}
+              onAIHelpUsed={(helpType) => handleAIHelpUsed(currentQuestion, helpType)}
+              disabled={!sessionUuid}
+            />
 
             <div className="mt-8 pt-6 border-t border-[var(--border)]">
               <div className="flex items-center justify-between">

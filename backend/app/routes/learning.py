@@ -1,13 +1,24 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import Response
 from pydantic import BaseModel
-from app.models.schemas import LearningAnalysisRequest
+from app.models.schemas import (
+    LearningAnalysisRequest,
+    CreateSessionRequest,
+    SessionResponse,
+    AskAIRequest,
+    AskAIResponse,
+    SaveQuestionTimingRequest,
+    CompleteSessionRequest,
+)
 from app.services import (
     evaluation_service,
     challenge_service,
     roadmap_service,
     question_service,
 )
+from app.db.database import get_db
+from app.db import queries
+from sqlalchemy.orm import Session
 import json
 import logging
 import re
@@ -393,4 +404,150 @@ async def analyze_learning(request: LearningAnalysisRequest):
         log.error(f"Error in /analyze-learning: {e}", exc_info=True)
         raise HTTPException(
             status_code=500, detail="An internal error occurred during analysis."
+        )
+
+
+# Database and timing endpoints
+
+
+@router.post("/create-session", response_model=SessionResponse)
+async def create_session(
+    request: CreateSessionRequest,
+    db: Session = Depends(get_db)
+):
+    """Create a new quiz session and return session UUID"""
+    try:
+        user = queries.get_or_create_user(db, request.student_name)
+        session = queries.create_session(
+            db,
+            user_id=user.id,
+            topic=sanitize_input(request.topic),
+            round=request.round
+        )
+        return SessionResponse(
+            session_uuid=session.session_uuid,
+            created_at=session.started_at,
+            topic=session.topic,
+            round=session.round
+        )
+    except Exception as e:
+        log.error(f"Error creating session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create session"
+        )
+
+
+@router.post("/ask-ai")
+async def ask_ai(
+    request: AskAIRequest,
+    db: Session = Depends(get_db)
+):
+    """Get AI hint or explanation for a question"""
+    try:
+        session = queries.get_session(db, request.session_uuid)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        if request.help_type == "hint":
+            prompt = f"""Question: {request.question_text}
+
+Provide a brief hint (1-2 sentences) that guides the student toward the correct answer without revealing it directly."""
+        else:
+            prompt = f"""Question: {request.question_text}
+
+Provide a clear explanation of the concept being tested and guide the student through solving it."""
+
+        from app.services.huggingface_service import query_model
+
+        result = await query_model(prompt)
+        content = result[0]["generated_text"] if result else "Unable to generate response. Please try again."
+
+        queries.mark_ai_help_used(
+            db,
+            session.id,
+            request.question_index,
+            request.help_type
+        )
+
+        return AskAIResponse(
+            content=content,
+            help_type=request.help_type
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error in ask-ai: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate AI help"
+        )
+
+
+@router.post("/save-question-timing")
+async def save_question_timing(
+    request: SaveQuestionTimingRequest,
+    db: Session = Depends(get_db)
+):
+    """Save timing data for a question"""
+    try:
+        session = queries.get_session(db, request.session_uuid)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        timing = queries.save_question_timing(
+            db,
+            session_id=session.id,
+            question_index=request.question_index,
+            question_text=request.question_text,
+            time_spent_seconds=request.time_spent_seconds,
+            student_answer=request.student_answer,
+            correct_answer=request.correct_answer,
+            is_correct=request.is_correct,
+            ai_help_type=request.ai_help_type
+        )
+
+        return {
+            "status": "saved",
+            "timing_id": timing.id,
+            "question_index": timing.question_index
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error saving timing: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save timing data"
+        )
+
+
+@router.post("/complete-session")
+async def complete_session(
+    request: CompleteSessionRequest,
+    db: Session = Depends(get_db)
+):
+    """Mark a session as completed or abandoned"""
+    try:
+        session = queries.complete_session(
+            db,
+            request.session_uuid,
+            request.status
+        )
+
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        return {
+            "status": "session_completed",
+            "session_uuid": session.session_uuid,
+            "completed_at": session.completed_at
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error completing session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to complete session"
         )

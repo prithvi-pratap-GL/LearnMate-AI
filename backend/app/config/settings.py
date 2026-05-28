@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     TOXICITY_THRESHOLD: float = 0.6
     INJECTION_THRESHOLD: float = 0.7
 
+    # Database settings
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/learnmate"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"
