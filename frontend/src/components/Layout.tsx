@@ -1,43 +1,35 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
-import { useTheme } from '../contexts/ThemeContext';
+import { Outlet, Link } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 const Layout: React.FC = () => {
-  const { theme, toggleTheme } = useTheme();
-
   return (
-    <div className="min-h-screen bg-[rgb(var(--background))] text-[rgb(var(--foreground))] transition-colors duration-300">
-      <nav className="bg-[rgb(var(--card))] shadow-md border-b border-[rgb(var(--border))]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <a href="/" className="text-2xl font-bold text-[rgb(var(--primary))]">
-              LearnMate AI
-            </a>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg bg-[rgb(var(--secondary))] hover:bg-[rgb(var(--muted))] transition-colors"
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? (
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l-2.121-2.121a1 1 0 00-1.414 0l-2.121 2.121a1 1 0 001.414 1.414L9 13.414l1.464 1.465a1 1 0 001.414-1.414zm2.121-10.607a1 1 0 010 1.414l-1.414 1.414a1 1 0 11-1.414-1.414l1.414-1.414a1 1 0 011.414 0zM3.464 4.464a1 1 0 000 1.414L4.878 7.293a1 1 0 001.414-1.414L4.878 3.05a1 1 0 00-1.414 0zm10.607 9.172a1 1 0 010 1.414l-1.414 1.414a1 1 0 11-1.414-1.414l1.414-1.414a1 1 0 011.414 0zM5 8a1 1 0 011-1h2a1 1 0 110 2H6a1 1 0 01-1-1zm10 0a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
-            </button>
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+      {/* Navbar */}
+      <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-[var(--border)] bg-[rgba(10,10,15,0.7)]">
+        <div className="max-w-6xl mx-auto px-8 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+            <div className="w-8 h-8 bg-[var(--accent)] rounded flex items-center justify-center">
+              <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24"><path d="M13 2L4.09 12.26c-.36.44-.55.66-.55.88 0 .2.08.39.21.53.15.16.36.33.88.33H12l-1 8 8.91-10.26c.36-.44.55-.66.55-.88a.72.72 0 0 0-.21-.53c-.15-.16-.36-.33-.88-.33H13l1-8z"/></svg>
+            </div>
+            LearnMate AI
+          </Link>
+          <div className="flex items-center gap-8">
+            <a href="/#how-it-works" className="text-sm text-[var(--text2)] hover:text-[var(--text)] transition">How it works</a>
+            <a href="/#features" className="text-sm text-[var(--text2)] hover:text-[var(--text)] transition">Features</a>
+            <a href="#" className="text-sm text-[var(--text2)] hover:text-[var(--text)] transition">GitHub ↗</a>
+            <Link to="/quiz" className="text-sm font-medium px-4 py-2 bg-[var(--accent)] text-white rounded hover:bg-[var(--accent2)] transition">
+              Start Assessment
+            </Link>
           </div>
         </div>
       </nav>
+
       <main>
         <Outlet />
       </main>
+
+      <Toaster position="bottom-right" />
     </div>
   );
 };

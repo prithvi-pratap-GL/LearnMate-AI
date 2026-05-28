@@ -222,9 +222,12 @@ async def generate_round_2_questions(http_request: Request):
         round_1_questions = body.get("round_1_questions", [])
 
         # Generate more advanced questions
-        questions = await question_service.generate_questions(
-            topic, difficulty="advanced"
+        result = await question_service.generate_questions(
+            topic,
+            difficulty="advanced"
         )
+
+        questions = result["questions"]
 
         # Filter out questions that were in Round 1 (exact match and similar)
         round_1_q_texts = [q.get("question", "").lower() for q in round_1_questions]
@@ -242,9 +245,11 @@ async def generate_round_2_questions(http_request: Request):
         attempts = 0
         all_questions = filtered_questions[:]
         while len(all_questions) < 5 and attempts < 4:
-            more_questions = await question_service.generate_questions(
-                topic, difficulty="advanced"
-            )
+
+            more_result = await question_service.generate_questions(...)
+
+            more_questions = more_result["questions"]
+            
             for q in more_questions:
                 if (
                     q.get("question", "").lower() not in round_1_q_texts

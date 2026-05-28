@@ -26,6 +26,7 @@ export interface IAnalysisResult {
   status: string;
   round: 1 | 2;
   evaluation?: IEvaluation;
+  round_1_evaluation?: IEvaluation;
   round_2_evaluation?: IEvaluation;
   generated_content: IGeneratedContent;
   roadmap: IRoadmap;

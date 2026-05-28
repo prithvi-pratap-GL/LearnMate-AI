@@ -16,13 +16,11 @@ from app.models.schemas import (
 
 log = logging.getLogger(__name__)
 
-# Evaluation model preference order
+# Evaluation model preference order - HuggingFace Router compatible
 EVALUATION_MODELS = [
-    "meta-llama/Llama-3.1-8B-Instruct:novita",
-    "meta-llama/Llama-2-70b-chat-hf",
-    "mistralai/Mistral-Large-Instruct-2407",
-    "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO",
+    "meta-llama/Llama-3.1-8B-Instruct",
     "mistralai/Mistral-7B-Instruct-v0.2",
+    "meta-llama/Llama-2-70b-chat-hf",
 ]
 
 
@@ -78,14 +76,16 @@ async def evaluate_learning(
                 }
             )
 
-    score = sum(j.get("score", 0) for j in judgements)
+    correct_count = sum(1 for j in judgements if j.get("correct", False))
+    total_questions = len(judgements)
+    score_percentage = int((correct_count / total_questions * 100) if total_questions > 0 else 0)
 
     answers_json = json.dumps(
         questions_list,
         ensure_ascii=False,
     )
 
-    answers_str = f"Score: {score}\n\n" f"{answers_json}"
+    answers_str = f"Score: {score_percentage}%\n\n" f"{answers_json}"
 
     prompt = EVALUATION_PROMPT.format(
         topic=request.topic,
@@ -153,7 +153,7 @@ async def evaluate_learning(
             # enrich response
             # ------------------
 
-            evaluation_data["score"] = score
+            evaluation_data["score"] = score_percentage
 
             evaluation_data["judgements"] = judgements
 

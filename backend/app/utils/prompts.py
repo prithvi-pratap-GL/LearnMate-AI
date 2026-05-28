@@ -1,67 +1,184 @@
 QUESTION_GENERATION_PROMPT = """
-Generate 5 UNIQUE, CORE CONCEPT Multiple Choice Questions (MCQ) specifically about "{topic}".
+You MUST generate exactly 5 UNIQUE, CORE CONCEPT Multiple Choice Questions (MCQ) about "{topic}".
 Difficulty Level: {difficulty}
 
-Return ONLY valid JSON array (no other text):
+===== CRITICAL OUTPUT FORMAT =====
+Return ONLY valid JSON. Nothing else. No markdown, no code blocks, no explanation, no text before or after JSON.
 
 [
-  {{"question": "...", "options": ["A", "B", "C", "D"], "correct_answer": "..."}}
+  {{
+    "question": "Complete question text here?",
+    "options": ["First complete answer option text", "Second complete answer option text", "Third complete answer option text", "Fourth complete answer option text"],
+    "correct_answer": "First complete answer option text"
+  }},
+  {{
+    "question": "Another complete question text?",
+    "options": ["Option A full text", "Option B full text", "Option C full text", "Option D full text"],
+    "correct_answer": "Option B full text"
+  }}
 ]
 
-CRITICAL REQUIREMENTS:
-1. Questions MUST BE UNIQUE - No repetition within this set
-2. CORE CONCEPTS ONLY - Focus on fundamental/essential {topic} concepts, not edge cases
-3. TO THE POINT - Direct questions testing knowledge, avoid lengthy narrative questions
-4. TOPIC-SPECIFIC - Use {topic}-specific terminology and examples
-5. DIFFICULTY LEVEL:
-   - beginner: Basic definitions and fundamental concepts
-   - intermediate: Deeper understanding, connections between concepts
-   - advanced: Complex scenarios, problem-solving, implementation details
+===== STRUCTURE VALIDATION =====
+Every question MUST have exactly these 3 fields (no extra fields):
+- "question": A clear question string ending with ?
+- "options": An array with EXACTLY 4 strings (4 options, no more, no less)
+- "correct_answer": Must be an EXACT substring match to one of the 4 options (case-sensitive)
 
-Requirements for QUESTIONS:
-- Each question tests ONE specific {topic} concept
-- Phrasing must be concise and clear
-- Avoid ambiguity
-- No generic or filler questions
+===== OPTIONS FORMAT (CRITICAL) =====
+Each option in the options array MUST be:
+✓ A complete, standalone sentence or phrase (10+ characters minimum)
+✓ Grammatically correct and readable
+✓ NO letters like A), B), C), D), 1), 2) at start or anywhere
+✓ NO brackets [ ] or parentheses ( ) around letters
+✓ NO special characters or markdown formatting
+✓ Just plain text describing the answer choice
 
-Requirements for OPTIONS:
-- Exactly 4 options per question
-- Mix correct answer position (not always same spot)
-- Plausible distractors related to {topic}, not obvious wrong answers
-- All options must be realistic for the difficulty level
+WRONG format examples (DO NOT GENERATE):
+- "A) This is wrong" ❌ Has letter prefix
+- "[Option 1]" ❌ Has brackets
+- "- First choice" ❌ Bullet formatting
+- "1." ❌ Numbered format
+- "**Bold text**" ❌ Markdown
 
-Requirements for ANSWERS:
-- One of the 4 options provided
-- Technically correct
-- Matches the difficulty level requested
+CORRECT format examples (ONLY GENERATE THIS):
+- "This describes a complete answer about the topic"
+- "A method that implements inheritance patterns"
+- "Synchronously handled data flow"
+- "Asynchronously managed component lifecycle"
 
-OUTPUT FORMAT:
-- ONLY valid JSON array, no other text
-- No markdown, no code blocks, no explanations
-- Fields: "question", "options" (array of 4 strings), "correct_answer" (exact match of one option)
-- NO DUPLICATE QUESTIONS within response
-- NO GENERIC OR FILLER QUESTIONS
+===== ANSWER MATCHING =====
+The correct_answer field MUST be word-for-word identical to one of the 4 options.
+
+Example:
+"options": ["The first complete answer", "The second choice", "Wrong answer one", "Wrong answer two"]
+"correct_answer": "The first complete answer"  ✓ EXACT MATCH
+
+NEVER do this:
+"correct_answer": "The first"  ❌ Partial match
+"correct_answer": "the first complete answer"  ❌ Case mismatch
+
+===== DIFFICULTY GUIDELINES =====
+- beginner: Basic definitions, straightforward concepts, single-step reasoning
+- intermediate: Practical application, connecting 2-3 ideas, common use cases
+- advanced: Complex scenarios, edge cases, implementation details, troubleshooting
+
+===== REQUIRED OUTPUT STEPS =====
+1. Generate exactly 5 questions about {topic}
+2. Ensure each question is unique and tests different concepts
+3. Mix the position of correct answers (put correct answer in different positions across questions)
+4. Verify each option is complete text (not letters or abbreviations)
+5. Verify correct_answer exactly matches one option
+6. Output ONLY the JSON array - nothing before or after
+7. Validate JSON is properly formatted and parseable
+
+===== FINAL VALIDATION BEFORE OUTPUT =====
+Before returning, verify:
+✓ Starts with [ and ends with ]
+✓ Contains exactly 5 question objects
+✓ Each question has exactly 3 fields: question, options, correct_answer
+✓ Each options array has EXACTLY 4 string elements
+✓ Each correct_answer is an exact match to one of the 4 options
+✓ No question uses answer letters/numbers in option text
+✓ No markdown, no code blocks, no explanations
+✓ Valid JSON that can be parsed
+
+Output ONLY the JSON array. Start with [ and end with ].
 """
 
 EVALUATION_PROMPT = """
-Act as an expert evaluator for the topic: {topic}.
+You are an expert evaluator for {topic}.
 
-First, reason step-by-step internally. For each question, compare the student's answer to the correct answer, assessing for correctness, depth, and clarity.
-Based on your internal analysis, determine a score, strengths, weak areas, and a proficiency level.
+TASK: Evaluate the student's performance and return a JSON object with assessment data.
 
-Finally, format your complete evaluation as a single JSON object.
-Return ONLY the valid JSON object below and nothing else.
-
-Return ONLY valid JSON:
-
-{{"score": 0, "strengths": [], "weak_areas": [], "level": ""}}
-
+===== INPUT DATA =====
 Topic: {topic}
 Questions and Answers: {answers}
 
-Requirements:
-- Your entire output must be the JSON object.
-- No markdown, no code blocks, no explanations outside the JSON.
+===== ANALYSIS TASK =====
+For the given questions and student answers:
+1. Evaluate each answer for correctness (compare to correct_answer)
+2. Identify the student's strengths (topics/concepts they understand well)
+3. Identify weak areas (topics/concepts needing improvement)
+4. Determine overall proficiency level (beginner/intermediate/advanced)
+
+===== REQUIRED OUTPUT FORMAT =====
+You MUST output ONLY a valid JSON object. Nothing else. No explanation, no markdown, no code blocks.
+
+Start immediately with {{ and end with }}.
+
+Required JSON structure with EXACT field names:
+{{
+  "score": <number between 0-100>,
+  "strengths": ["strength1", "strength2", "strength3"],
+  "weak_areas": ["area1", "area2"],
+  "level": "beginner|intermediate|advanced",
+  "feedback": "2-3 sentence overall assessment"
+}}
+
+===== FIELD REQUIREMENTS =====
+
+score: A percentage (0-100) representing overall performance
+  - 0-40: Poor performance, needs foundational review
+  - 40-60: Fair performance, has some gaps
+  - 60-80: Good performance, minor gaps
+  - 80-100: Excellent performance, well-understood
+
+strengths: Array of 2-4 strings describing what the student did well
+  Examples: ["Understands async/await patterns", "Strong grasp of state management"]
+  - Each item should be a specific capability related to {topic}
+  - Be specific, not generic
+
+weak_areas: Array of 1-3 strings describing areas needing improvement
+  Examples: ["Struggles with recursion", "Needs practice with error handling"]
+  - Each item should be actionable
+  - Be specific to {topic}
+
+level: Must be EXACTLY one of: "beginner", "intermediate", "advanced"
+  - beginner: Below 40% correct
+  - intermediate: 40-75% correct
+  - advanced: 75%+ correct
+
+feedback: 2-3 sentences of encouragement or actionable guidance
+  - Be constructive and motivating
+  - Reference specific areas
+  - End with an action item
+
+===== OUTPUT RULES =====
+✓ Return ONLY the JSON object
+✓ Start with {{ and end with }}
+✓ Use double quotes for all strings
+✓ Arrays must use [ ] with comma-separated strings
+✓ Strings must NOT contain unescaped quotes
+✓ Valid JSON that can be parsed
+
+ABSOLUTELY NO:
+❌ Text before the JSON
+❌ Code blocks or markdown
+❌ Explanation after the JSON
+❌ Multiple JSON objects
+❌ Incomplete JSON (all 5 fields required)
+
+===== EXAMPLE CORRECT OUTPUT =====
+{{
+  "score": 75,
+  "strengths": ["Correctly identifies class syntax", "Understands inheritance", "Good error handling practices"],
+  "weak_areas": ["Struggles with polymorphism", "Needs practice with abstract classes"],
+  "level": "intermediate",
+  "feedback": "You're making solid progress with OOP fundamentals. Focus on polymorphism concepts this week - they'll strengthen your understanding of inheritance patterns you've already mastered."
+}}
+
+===== STRICT VALIDATION =====
+Before returning, verify:
+✓ Starts with {{ and ends with }}
+✓ Contains exactly 5 fields: score, strengths, weak_areas, level, feedback
+✓ score is a number 0-100
+✓ strengths is an array of 2-4 strings
+✓ weak_areas is an array of 1-3 strings
+✓ level is exactly "beginner", "intermediate", or "advanced"
+✓ feedback is a string of 2-3 sentences
+✓ Valid parseable JSON
+
+Output ONLY the JSON object. No preamble, no explanation. Start with {{ immediately.
 """
 
 PERFORMANCE_ANALYSIS_PROMPT = """
@@ -143,39 +260,96 @@ Make the roadmap highly specific to {topic} with concrete examples, technical te
 """
 
 LLM_JUDGE_PROMPT = """
-You are an educational evaluator.
+You are an expert educational evaluator. Your task is to evaluate if a student's answer is correct.
 
-Evaluate the student's answer fairly.
+===== EVALUATION INPUT =====
+Question: {question}
+Correct Answer: {correct_answer}
+Student Answer: {student_answer}
 
-Question:
-{question}
+===== EVALUATION CRITERIA =====
+- Be fair but accurate
+- Accept answers that are conceptually correct or semantically equivalent
+- Reject answers that are unrelated, incorrect, or incomplete
+- Consider minor phrasing differences if the core concept is correct
 
-Correct Answer:
-{correct_answer}
+===== REQUIRED JSON OUTPUT =====
+You MUST output ONLY a valid JSON object. Nothing else. No explanation, no text before or after.
 
-Student Answer:
-{student_answer}
+Start immediately with {{ and end with }}.
 
-Return ONLY valid JSON:
-
-{
+Required structure (EXACTLY 3 fields):
+{{
   "correct": true,
   "score": 1,
-  "reason": "short explanation"
-}
+  "reason": "Brief 1-2 sentence explanation of why this answer is correct/incorrect"
+}}
 
-Rules:
+===== FIELD REQUIREMENTS =====
 
-1. Be strict but fair
-2. Accept conceptually correct answers
-3. Reject unrelated or incorrect answers
-4. score must be:
+correct: Boolean (true or false)
+  - true: Student answer is correct or conceptually equivalent
+  - false: Student answer is incorrect or unrelated
 
-- 1 = correct
-- 0 = incorrect
+score: Integer (must be 1 or 0 only)
+  - 1: Correct answer
+  - 0: Incorrect answer
 
-5. reason must be concise
-6. No markdown
-7. No extra text
-8. Output ONLY JSON
+reason: String (1-2 sentences max)
+  - Briefly explain your judgment
+  - Examples:
+    - "Correct: Accurately describes the concept"
+    - "Incorrect: Misses the key aspect of X"
+    - "Correct: Equivalent phrasing of the concept"
+  - Must be concise (no long explanations)
+
+===== OUTPUT VALIDATION =====
+✓ Starts with {{ and ends with }}
+✓ All field names in double quotes
+✓ correct is boolean (true or false, no quotes)
+✓ score is 1 or 0 (number, no quotes)
+✓ reason is a string (in double quotes)
+✓ Valid parseable JSON
+
+ABSOLUTELY NO:
+❌ Text before the JSON
+❌ Text after the JSON
+❌ Markdown, code blocks, or formatting
+❌ Extra fields beyond the 3 required
+❌ Multiple JSON objects
+❌ Incomplete JSON (all 3 fields required)
+
+===== EXAMPLE CORRECT OUTPUTS =====
+
+Example 1:
+{{
+  "correct": true,
+  "score": 1,
+  "reason": "Correct: The student's answer accurately describes the concept of inheritance in OOP."
+}}
+
+Example 2:
+{{
+  "correct": false,
+  "score": 0,
+  "reason": "Incorrect: The answer confuses inheritance with composition, which are different concepts."
+}}
+
+Example 3:
+{{
+  "correct": true,
+  "score": 1,
+  "reason": "Correct: While phrased differently, the student's answer captures the essential meaning."
+}}
+
+===== STRICT VALIDATION =====
+Before returning, verify:
+✓ Output is exactly 3 JSON fields: correct, score, reason
+✓ correct is true or false (boolean)
+✓ score is 1 or 0 (integer)
+✓ reason is a non-empty string (2-15 words)
+✓ Proper JSON formatting
+✓ No text before {{ or after }}
+
+Output ONLY the JSON object. Start with {{ immediately. Do not include any explanation.
 """

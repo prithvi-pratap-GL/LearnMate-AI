@@ -201,7 +201,8 @@ const QuizPage: React.FC = () => {
       setResult({
         status: response.data.status,
         round: 2,
-        round_1_score: response.data.round_1_score,
+        round_1_score: round1Score || 0,
+        round_1_evaluation: round1Evaluation || undefined,
         round_2_evaluation: response.data.round_2_evaluation,
         generated_content: response.data.generated_content,
         roadmap: response.data.roadmap,
@@ -413,7 +414,7 @@ const QuizPage: React.FC = () => {
           studentName={studentName}
           topic={topic}
           evaluation={result.round === 2 ? (result.round_2_evaluation!) : (result.evaluation!)}
-          round1Evaluation={result.round === 2 ? result.evaluation : undefined}
+          round1Evaluation={result.round === 2 ? result.round_1_evaluation : undefined}
           round1Score={result.round_1_score}
           generatedContent={result.generated_content}
           roadmap={result.roadmap}

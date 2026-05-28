@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     # Existing project settings
     HUGGING_FACE_API_KEY: str
 
+    # Debug mode - set to False in production to use real LLM models
+    DEBUG: bool = True
+
     # Safety settings
     ENABLE_PII: bool = True
     ENABLE_TOXICITY: bool = True
