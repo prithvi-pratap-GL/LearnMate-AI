@@ -19,7 +19,7 @@ const ScoreRing: React.FC<{ score: number; size?: number }> = ({ score, size = 1
   const offset = circumference - (score / 100) * circumference;
 
   return (
-    <svg width={size} height={size} className="transform -rotate-90">
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
       <circle cx={size / 2} cy={size / 2} r={size / 2 - 18} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
       <circle
         cx={size / 2}
@@ -33,7 +33,16 @@ const ScoreRing: React.FC<{ score: number; size?: number }> = ({ score, size = 1
         strokeLinecap="round"
         className="transition-[stroke-dashoffset] duration-1000 ease-out"
       />
-      <text x={size / 2} y={size / 2 + 8} textAnchor="middle" className="text-xl font-bold fill-[var(--text)]" fontSize="32" fontFamily="Syne">
+      <text
+        x={size / 2}
+        y={size / 2}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        className="text-xl font-bold fill-[var(--text)]"
+        fontSize="32"
+        fontFamily="Syne"
+        style={{ transform: 'rotate(90deg)', transformOrigin: `${size / 2}px ${size / 2}px` }}
+      >
         {score}%
       </text>
     </svg>
@@ -162,45 +171,164 @@ const StructuredContent: React.FC<{ content: string; isRoadmap?: boolean }> = ({
     );
   }
 
+  // Parse markdown formatting: bold (**text**), italic (*text*), remove them for display
+  const parseMarkdown = (text: string) => {
+    if (!text) return '';
+    // Remove markdown formatting, keep the text
+    let result = text
+      .replace(/\*\*(.+?)\*\*/g, '$1')    // **bold** -> bold (non-greedy)
+      .replace(/\*([^*]+?)\*/g, '$1')     // *italic* -> italic (but not ** which we already handled)
+      .replace(/^#+\s+/, '');             // Remove heading markers from start
+    return result.trim();
+  };
+
   // AI Analysis rendering
   return (
     <div className="space-y-4">
       {lines.map((line, idx) => {
         const trimmed = line.trim();
 
+        if (trimmed.startsWith('###')) {
+          const title = trimmed.replace(/^#+\s*/, '');
+          return (
+            <div key={idx} className="mt-4 mb-2">
+              <h4 className="text-base font-semibold text-[var(--accent2)]" style={{ fontFamily: 'Syne' }}>
+                {parseMarkdown(title)}
+              </h4>
+            </div>
+          );
+        }
+
         if (trimmed.startsWith('##')) {
           const title = trimmed.replace(/^#+\s*/, '');
           return (
             <div key={idx} className="mt-6 mb-4">
               <h3 className="text-lg font-bold text-[var(--text)]" style={{ fontFamily: 'Syne' }}>
-                {title}
+                {parseMarkdown(title)}
               </h3>
               <div className="h-1 w-12 bg-[var(--accent)] rounded mt-2"></div>
             </div>
           );
         }
 
-        if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
+        if (trimmed.startsWith('+') || trimmed.startsWith('-') || trimmed.startsWith('•')) {
+          const cleaned = trimmed.replace(/^[+•-]\s*/, '');
           return (
-            <div key={idx} className="flex items-start gap-3">
-              <span className="text-[var(--accent)] font-bold mt-1">●</span>
+            <div key={idx} className="flex items-start gap-3 ml-2">
+              <span className="text-[var(--accent)] font-bold mt-1 flex-shrink-0">+</span>
               <p className="text-sm text-[var(--text2)] leading-relaxed">
-                {trimmed.replace(/^[-•]\s*/, '')}
+                {parseMarkdown(cleaned)}
               </p>
             </div>
           );
         }
 
-        if (trimmed) {
+        if (trimmed && !trimmed.match(/^#+/) && !trimmed.match(/^[*\s]/)) {
           return (
             <p key={idx} className="text-sm text-[var(--text2)] leading-relaxed">
-              {trimmed}
+              {parseMarkdown(trimmed)}
             </p>
           );
         }
 
         return null;
       })}
+    </div>
+  );
+};
+
+// Structured AI Analysis Panel
+const AnalysisPanel: React.FC<{ content: string }> = ({ content }) => {
+  const lines = content.split('\n').filter(line => line.trim());
+
+  // Extract sections from content
+  let currentSection = '';
+  const allSections: { [key: string]: string[] } = {};
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('##') || trimmed.startsWith('###')) {
+      currentSection = trimmed.replace(/^#+\s*/, '').toLowerCase();
+      allSections[currentSection] = [];
+    } else if (trimmed && currentSection) {
+      allSections[currentSection].push(trimmed.replace(/^\*+/, '').replace(/^\*+/, '').replace(/^[-•]\s*/, '').trim());
+    }
+  });
+
+  // Extract key insights
+  const strengths = allSections['strengths'] || allSections['strength'] || [];
+  const weaknesses = allSections['weak areas'] || allSections['weaknesses'] || allSections['areas to improve'] || [];
+
+  // Build analysis summary from content
+  const summaryLines = lines.slice(0, Math.min(3, lines.length)).filter(l => !l.startsWith('#'));
+  const summary = summaryLines.join(' ').substring(0, 200);
+
+  return (
+    <div className="space-y-6">
+      {/* Performance Summary */}
+      <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/25 rounded-xl p-6">
+        <h4 className="text-sm font-bold text-[var(--accent)] mb-3">Performance Summary</h4>
+        <p className="text-sm text-[var(--text2)] leading-relaxed">
+          {summary || 'Your performance demonstrates a solid understanding of the core concepts with room for improvement in specific areas.'}
+        </p>
+      </div>
+
+      {/* Strengths Section */}
+      <div>
+        <h4 className="text-sm font-bold text-[var(--success)] mb-4 flex items-center gap-2">
+          <span>✓</span> Key Strengths
+        </h4>
+        <div className="grid gap-2">
+          {strengths && strengths.length > 0 ? (
+            strengths.slice(0, 4).map((item, idx) => (
+              <div key={idx} className="flex items-start gap-3 px-4 py-3 rounded-lg bg-[var(--success-bg)]/30 border border-[var(--success)]/20">
+                <span className="text-[var(--success)] text-sm mt-0.5 flex-shrink-0">●</span>
+                <p className="text-sm text-[var(--text2)]">{item}</p>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-[var(--text3)]">Strong understanding demonstrated across topics</div>
+          )}
+        </div>
+      </div>
+
+      {/* Weak Areas Section */}
+      <div>
+        <h4 className="text-sm font-bold text-[var(--warning)] mb-4 flex items-center gap-2">
+          <span>!</span> Areas for Focus
+        </h4>
+        <div className="grid gap-2">
+          {weaknesses && weaknesses.length > 0 ? (
+            weaknesses.slice(0, 4).map((item, idx) => (
+              <div key={idx} className="flex items-start gap-3 px-4 py-3 rounded-lg bg-[var(--warning-bg)]/30 border border-[var(--warning)]/20">
+                <span className="text-[var(--warning)] text-sm mt-0.5 flex-shrink-0">→</span>
+                <p className="text-sm text-[var(--text2)]">{item}</p>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-[var(--text3)]">Focus on deepening understanding through practice</div>
+          )}
+        </div>
+      </div>
+
+      {/* Recommendations */}
+      <div className="bg-gradient-to-r from-[var(--accent)]/5 to-[var(--accent2)]/5 border border-[var(--accent)]/20 rounded-xl p-6">
+        <h4 className="text-sm font-bold text-[var(--accent2)] mb-3">Next Steps</h4>
+        <ul className="space-y-2">
+          <li className="flex items-start gap-3 text-sm text-[var(--text2)]">
+            <span className="text-[var(--accent)] flex-shrink-0">→</span>
+            <span>Review the weak areas using the Learning Roadmap</span>
+          </li>
+          <li className="flex items-start gap-3 text-sm text-[var(--text2)]">
+            <span className="text-[var(--accent)] flex-shrink-0">→</span>
+            <span>Practice similar questions to strengthen understanding</span>
+          </li>
+          <li className="flex items-start gap-3 text-sm text-[var(--text2)]">
+            <span className="text-[var(--accent)] flex-shrink-0">→</span>
+            <span>Take another assessment to track your progress</span>
+          </li>
+        </ul>
+      </div>
     </div>
   );
 };
@@ -269,57 +397,54 @@ const ResultsDashboard: React.FC<IResultsDashboardProps> = ({
             </div>
           </div>
 
-          {/* Score Cards */}
-          <div className={`grid ${round === 2 ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6 mb-12`}>
-            {round === 2 && round1Score !== undefined && (
-              <div className="bg-[var(--surface)] border border-[var(--border2)] rounded-2xl p-8 text-center">
-                <div className="text-xs uppercase tracking-widest text-[var(--text3)] font-bold mb-6">Foundations</div>
-                <ScoreRing score={round1Score} size={140} />
-                <div className="mt-6">
-                  <div className="text-sm text-[var(--text2)] mb-2">Progression</div>
-                  <div className="text-xs font-bold text-[var(--text)]">
-                    {round1Evaluation?.level ? getLevelArrow('Beginner', round1Evaluation.level) : 'Beginner → Intermediate'}
-                  </div>
-                  <div className={`mt-3 text-xs px-3 py-1 rounded-full inline-block font-bold ${getLevelColor(round1Evaluation?.level || '')}`}>
-                    {round1Evaluation?.level || 'Beginner'}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className={`bg-[var(--surface)] border border-[var(--border2)] rounded-2xl p-8 text-center ${round === 2 ? '' : 'lg:col-span-1'}`}>
-              <div className="text-xs uppercase tracking-widest text-[var(--text3)] font-bold mb-6">
-                {round === 2 ? 'Advanced' : 'Your Score'}
-              </div>
-              <ScoreRing score={evaluation.score} size={140} />
+          {/* Score Cards - Always 3-column layout */}
+          <div className="grid lg:grid-cols-3 gap-6 mb-12">
+            {/* Card 1: Foundations (Round 1) */}
+            <div className="bg-[var(--surface)] border border-[var(--border2)] rounded-2xl p-8 text-center">
+              <div className="text-xs uppercase tracking-widest text-[var(--text3)] font-bold mb-6">Foundations</div>
+              <ScoreRing score={round === 2 && round1Score !== undefined ? round1Score : evaluation.score} size={140} />
               <div className="mt-6">
-                {round === 2 && (
-                  <div>
-                    <div className="text-sm text-[var(--text2)] mb-2">Progression</div>
-                    <div className="text-xs font-bold text-[var(--text)] mb-3">
-                      Intermediate → Advanced
-                    </div>
-                  </div>
-                )}
-                <div className={`mt-3 text-xs px-3 py-1 rounded-full inline-block font-bold ${getLevelColor(evaluation.level)}`}>
-                  {evaluation.level}
+                <div className="text-sm text-[var(--text2)] mb-2">Progression</div>
+                <div className="text-xs font-bold text-[var(--text)]">
+                  {round === 2
+                    ? (round1Evaluation?.level ? getLevelArrow('Beginner', round1Evaluation.level) : 'Beginner → Intermediate')
+                    : 'Beginner → ' + (evaluation.level || 'Intermediate')}
+                </div>
+                <div className={`mt-3 text-xs px-3 py-1 rounded-full inline-block font-bold ${getLevelColor(round === 2 ? (round1Evaluation?.level || '') : evaluation.level)}`}>
+                  {round === 2 ? (round1Evaluation?.level || 'Beginner') : evaluation.level}
                 </div>
               </div>
             </div>
 
-            {round === 2 && (
-              <div className="bg-[var(--surface)] border border-[var(--border2)] rounded-2xl p-8">
-                <div className="text-xs uppercase tracking-widest text-[var(--text3)] font-bold mb-8">Score comparison</div>
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Round 1</span>
-                      <span className="text-sm font-bold text-[var(--text)]">{round1Score}%</span>
-                    </div>
-                    <div className="h-2 bg-[rgba(255,255,255,0.08)] rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500" style={{ width: `${round1Score}%` }}></div>
-                    </div>
+            {/* Card 2: Advanced (Round 2) */}
+            <div className="bg-[var(--surface)] border border-[var(--border2)] rounded-2xl p-8 text-center">
+              <div className="text-xs uppercase tracking-widest text-[var(--text3)] font-bold mb-6">Advanced</div>
+              <ScoreRing score={round === 2 ? evaluation.score : 0} size={140} />
+              <div className="mt-6">
+                <div className="text-sm text-[var(--text2)] mb-2">Progression</div>
+                <div className="text-xs font-bold text-[var(--text)] mb-3">
+                  {round === 2 ? 'Intermediate → Advanced' : 'Not Available'}
+                </div>
+              </div>
+              <div className={`mt-3 text-xs px-3 py-1 rounded-full inline-block font-bold ${round === 2 ? getLevelColor(evaluation.level) : 'text-[var(--text3)]'}`}>
+                {round === 2 ? evaluation.level : '—'}
+              </div>
+            </div>
+
+            {/* Card 3: Score Comparison */}
+            <div className="bg-[var(--surface)] border border-[var(--border2)] rounded-2xl p-8">
+              <div className="text-xs uppercase tracking-widest text-[var(--text3)] font-bold mb-8">Score Comparison</div>
+              <div className="space-y-6">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Round 1</span>
+                    <span className="text-sm font-bold text-[var(--text)]">{round === 2 && round1Score !== undefined ? round1Score : evaluation.score}%</span>
                   </div>
+                  <div className="h-2 bg-[rgba(255,255,255,0.08)] rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500" style={{ width: `${round === 2 && round1Score !== undefined ? round1Score : evaluation.score}%` }}></div>
+                  </div>
+                </div>
+                {round === 2 && (
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">Round 2</span>
@@ -329,9 +454,9 @@ const ResultsDashboard: React.FC<IResultsDashboardProps> = ({
                       <div className="h-full bg-green-500" style={{ width: `${evaluation.score}%` }}></div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Tabs */}
@@ -365,12 +490,19 @@ const ResultsDashboard: React.FC<IResultsDashboardProps> = ({
                     <span className="text-2xl">✓</span> Strengths
                   </h3>
                   <div className="space-y-3">
-                    {evaluation.strengths.map((str, idx) => (
-                      <div key={idx} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[var(--success-bg)] border border-[var(--success-border)]">
-                        <span className="text-[var(--success)]">●</span>
-                        <span className="text-sm text-[var(--text)]">{str}</span>
+                    {evaluation.strengths && evaluation.strengths.length > 0 ? (
+                      evaluation.strengths.map((str, idx) => (
+                        <div key={idx} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[var(--success-bg)] border border-[var(--success-border)]">
+                          <span className="text-[var(--success)]">●</span>
+                          <span className="text-sm text-[var(--text)]">{str}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[var(--success-bg)] border border-[var(--success-border)]">
+                        <span className="text-[var(--success)]">✓</span>
+                        <span className="text-sm text-[var(--text)]">Great effort! Keep learning and improving 🚀</span>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -379,12 +511,19 @@ const ResultsDashboard: React.FC<IResultsDashboardProps> = ({
                     <span className="text-2xl">!</span> Areas to Improve
                   </h3>
                   <div className="space-y-3">
-                    {evaluation.weak_areas.map((area, idx) => (
-                      <div key={idx} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[var(--warning-bg)] border border-[var(--warning-border)]">
-                        <span className="text-[var(--warning)]">●</span>
-                        <span className="text-sm text-[var(--text)]">{area}</span>
+                    {evaluation.weak_areas && evaluation.weak_areas.length > 0 ? (
+                      evaluation.weak_areas.map((area, idx) => (
+                        <div key={idx} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[var(--warning-bg)] border border-[var(--warning-border)]">
+                          <span className="text-[var(--warning)]">●</span>
+                          <span className="text-sm text-[var(--text)]">{area}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[var(--accent-glow)] border border-[rgba(99,102,241,0.25)]">
+                        <span className="text-[var(--accent)]">✓</span>
+                        <span className="text-sm text-[var(--text)]">No weaknesses identified. You're doing excellent! 🌟</span>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
@@ -454,14 +593,22 @@ const ResultsDashboard: React.FC<IResultsDashboardProps> = ({
             {/* AI Analysis Tab */}
             {activeTab === 'analysis' && (
               <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-2xl p-8">
-                <StructuredContent content={generatedContent.content} />
+                {generatedContent && generatedContent.content ? (
+                  <AnalysisPanel content={generatedContent.content + '\n## Strengths\n' + (evaluation.strengths || []).map(s => `- ${s}`).join('\n') + '\n## Weak Areas\n' + (evaluation.weak_areas || []).map(w => `- ${w}`).join('\n')} />
+                ) : (
+                  <p className="text-[var(--text2)]">AI analysis is being generated...</p>
+                )}
               </div>
             )}
 
             {/* Roadmap Tab */}
             {activeTab === 'roadmap' && (
               <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-2xl p-8">
-                <StructuredContent content={roadmap.content} isRoadmap />
+                {roadmap && roadmap.content ? (
+                  <StructuredContent content={roadmap.content} isRoadmap />
+                ) : (
+                  <p className="text-[var(--text2)]">Personalized learning roadmap will be generated based on your performance...</p>
+                )}
               </div>
             )}
           </div>
